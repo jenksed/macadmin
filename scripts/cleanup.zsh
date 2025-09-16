@@ -37,47 +37,46 @@ for arg in "$@"; do
     --brew) brew=1 ;;
     --dry-run) export DRY_RUN=1 ;;
     -h|--help) usage; exit 0 ;;
-    *) warn "Unknown arg: $arg"; usage; exit 1 ;;
+    *) log_warn "Unknown arg: $arg"; usage; exit 1 ;;
   esac
 done
 
 (( user || system || logs || periodic || brew )) || { usage; exit 1; }
 
 if (( user )); then
-  info "Cleaning user caches..."
+  log_info "Cleaning user caches..."
   run rm -rf ~/Library/Caches/* 2>/dev/null || true
 fi
 
 if (( system )); then
   require_sudo
-  if confirm "Clean /Library/Caches (may affect app caches)?"; then
-    info "Cleaning system caches..."
+  if confirm_or_exit "Clean /Library/Caches (may affect app caches)?"; then
+    log_info "Cleaning system caches..."
     run sudo rm -rf /Library/Caches/* 2>/dev/null || true
   else
-    warn "Skipped system caches."
+    log_warn "Skipped system caches."
   fi
 fi
 
 if (( logs )); then
   require_sudo
-  info "Rotating/compressing logs via newsyslog (where configured)..."
+  log_info "Rotating/compressing logs via newsyslog (where configured)..."
   run sudo newsyslog || true
 fi
 
 if (( periodic )); then
   require_sudo
-  info "Running periodic daily/weekly/monthly..."
+  log_info "Running periodic daily/weekly/monthly..."
   run sudo periodic daily weekly monthly
 fi
 
 if (( brew )); then
   if command -v brew >/dev/null 2>&1; then
-    info "Running brew cleanup..."
+    log_info "Running brew cleanup..."
     run brew cleanup
   else
-    warn "Homebrew not found; skipping brew cleanup."
+    log_warn "Homebrew not found; skipping brew cleanup."
   fi
 fi
 
-success "Cleanup complete."
-
+log_info "Cleanup complete."

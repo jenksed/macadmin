@@ -30,20 +30,20 @@ for arg in "$@"; do
     --restart) restart=1 ;;
     --dry-run) export DRY_RUN=1 ;;
     -h|--help) usage; exit 0 ;;
-    *) warn "Unknown arg: $arg"; usage; exit 1 ;;
+    *) log_warn "Unknown arg: $arg"; usage; exit 1 ;;
   esac
 done
 
 require_cmd softwareupdate || exit 1
 
 if (( list )); then
-  info "Listing available updates..."
+  log_info "Listing available updates..."
   run softwareupdate --list
 fi
 
 if (( install )); then
   require_sudo
-  info "Installing all available updates..."
+  log_info "Installing all available updates..."
   if (( restart )); then
     run sudo softwareupdate --install --all --restart
   else
@@ -55,5 +55,4 @@ if (( ! list && ! install )); then
   usage; exit 1
 fi
 
-success "Done."
-
+log_info "Done."

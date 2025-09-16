@@ -22,13 +22,13 @@ EOF
 }
 
 status() {
-  info "Firewall"
+  log_info "Firewall"
   /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate || true
-  info "Gatekeeper"
+  log_info "Gatekeeper"
   spctl --status || true
-  info "SIP (System Integrity Protection)"
+  log_info "SIP (System Integrity Protection)"
   csrutil status 2>/dev/null || echo "Query requires Recovery context on some versions."
-  info "FileVault"
+  log_info "FileVault"
   fdesetup status 2>/dev/null || true
 }
 
@@ -41,8 +41,8 @@ case "$cmd" in
     action=${2:-}
     require_sudo
     case "$action" in
-      on)  info "Enabling firewall..."; run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on ;;
-      off) info "Disabling firewall..."; run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off ;;
+      on)  log_info "Enabling firewall..."; run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on ;;
+      off) log_info "Disabling firewall..."; run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off ;;
       *) usage; exit 1 ;;
     esac
     ;;
@@ -50,13 +50,12 @@ case "$cmd" in
     action=${2:-}
     require_sudo
     case "$action" in
-      on)  info "Enabling Gatekeeper..."; run sudo spctl --master-enable ;;
-      off) info "Disabling Gatekeeper..."; run sudo spctl --master-disable ;;
+      on)  log_info "Enabling Gatekeeper..."; run sudo spctl --master-enable ;;
+      off) log_info "Disabling Gatekeeper..."; run sudo spctl --master-disable ;;
       *) usage; exit 1 ;;
     esac
     ;;
   -h|--help|*) usage; exit 0 ;;
 esac
 
-success "Done."
-
+log_info "Done."

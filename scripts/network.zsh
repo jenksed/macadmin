@@ -25,7 +25,7 @@ EOF
 cmd=${1:-}
 case "$cmd" in
   services)
-    info "Listing network services..."
+    log_info "Listing network services..."
     networksetup -listallnetworkservices || die "networksetup failed"
     ;;
   wifi)
@@ -37,19 +37,18 @@ case "$cmd" in
     dev=$port
     if [[ -z "$dev" ]]; then die "Wi‑Fi device not found"; fi
     case "$action" in
-      on)  info "Enabling Wi‑Fi on $dev"; run networksetup -setairportpower "$dev" on ;;
-      off) info "Disabling Wi‑Fi on $dev"; run networksetup -setairportpower "$dev" off ;;
+      on)  log_info "Enabling Wi‑Fi on $dev"; run networksetup -setairportpower "$dev" on ;;
+      off) log_info "Disabling Wi‑Fi on $dev"; run networksetup -setairportpower "$dev" off ;;
       *) usage; exit 1 ;;
     esac
     ;;
   dns-flush)
     require_sudo
-    info "Flushing DNS cache..."
+    log_info "Flushing DNS cache..."
     run sudo dscacheutil -flushcache
     run sudo killall -HUP mDNSResponder || true
     ;;
   -h|--help|*) usage; exit 0 ;;
 esac
 
-success "Done."
-
+log_info "Done."

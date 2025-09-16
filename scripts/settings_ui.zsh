@@ -25,24 +25,24 @@ for arg in "$@"; do
     --apply) apply=1 ;;
     --restart) restart=1 ;;
     -h|--help) usage; exit 0 ;;
-    *) warn "Unknown arg: $arg"; usage; exit 1 ;;
+    *) log_warn "Unknown arg: $arg"; usage; exit 1 ;;
   esac
 done
 
 if (( apply )); then
-  info "Applying Finder settings..."
+  log_info "Applying Finder settings..."
   defaults write NSGlobalDomain AppleShowAllExtensions -bool true
   defaults write com.apple.finder ShowPathbar -bool true
   defaults write com.apple.finder ShowStatusBar -bool true
   defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
 
-  info "Applying Dock settings..."
+  log_info "Applying Dock settings..."
   defaults write com.apple.dock autohide -bool true
   defaults write com.apple.dock tilesize -int 48
   defaults write com.apple.dock mineffect -string scale
   defaults write com.apple.dock autohide-delay -float 0
 
-  info "Applying input/text settings..."
+  log_info "Applying input/text settings..."
   defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
   defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
   defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
@@ -51,10 +51,9 @@ if (( apply )); then
 fi
 
 if (( restart )); then
-  info "Restarting Finder and Dock..."
+  log_info "Restarting Finder and Dock..."
   killall Finder 2>/dev/null || true
   killall Dock 2>/dev/null || true
 fi
 
-success "Settings applied."
-
+log_info "Settings applied."

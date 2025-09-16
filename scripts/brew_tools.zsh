@@ -25,17 +25,17 @@ cmd=${1:-}
 case "$cmd" in
   check)
     if command -v brew >/dev/null 2>&1; then
-      success "Homebrew found: $(brew --version | head -1)"
+      log_info "Homebrew found: $(brew --version | head -1)"
     else
-      warn "Homebrew not installed."
+      log_warn "Homebrew not installed."
       return 1
     fi
     ;;
   ensure)
     if command -v brew >/dev/null 2>&1; then
-      success "Homebrew already installed."
+      log_info "Homebrew already installed."
     else
-      info "Installing Homebrew (will prompt)..."
+      log_info "Installing Homebrew (will prompt)..."
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     fi
     ;;
@@ -45,11 +45,10 @@ case "$cmd" in
     if [[ ${2:-} == "--file" && -n ${3:-} ]]; then
       fileflag=(--file "$3")
     fi
-    info "Running brew bundle ${fileflag:+with file ${fileflag[2]}}..."
+    log_info "Running brew bundle ${fileflag:+with file ${fileflag[2]}}..."
     run brew bundle $fileflag
     ;;
   -h|--help|*) usage; exit 0 ;;
 esac
 
-success "Done."
-
+log_info "Done."

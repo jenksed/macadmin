@@ -37,7 +37,7 @@ case "$cmd" in
     shift || true
     auto=0
     [[ ${1:-} == "--auto" ]] && auto=1
-    info "Starting Time Machine backup..."
+    log_info "Starting Time Machine backup..."
     if (( auto )); then
       run tmutil startbackup --auto
     else
@@ -51,7 +51,7 @@ case "$cmd" in
     percent=${2:-}
     [[ -z "$percent" ]] && { usage; exit 1; }
     require_sudo
-    info "Thinning local snapshots to ${percent}%..."
+    log_info "Thinning local snapshots to ${percent}%..."
     run sudo tmutil thinlocalsnapshots / $percent 4
     ;;
   exclude)
@@ -59,13 +59,12 @@ case "$cmd" in
     path=${3:-}
     [[ -z "$action" || -z "$path" ]] && { usage; exit 1; }
     case "$action" in
-      add) info "Excluding $path"; run tmutil addexclusion "$path" ;;
-      remove) info "Removing exclusion $path"; run tmutil removeexclusion "$path" ;;
+      add) log_info "Excluding $path"; run tmutil addexclusion "$path" ;;
+      remove) log_info "Removing exclusion $path"; run tmutil removeexclusion "$path" ;;
       *) usage; exit 1 ;;
     esac
     ;;
   -h|--help|*) usage; exit 0 ;;
 esac
 
-success "Done."
-
+log_info "Done."
