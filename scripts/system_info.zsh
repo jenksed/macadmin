@@ -1,10 +1,30 @@
 #!/usr/bin/env zsh
+# shellcheck shell=bash disable=SC2154
 emulate -L zsh
 setopt errexit nounset pipefail
 
 SCRIPT_DIR=${0:a:h}
 source "$SCRIPT_DIR/../lib/common.zsh"
 require_macos || exit 1
+
+usage() {
+  cat <<'EOF'
+system_info.zsh - show OS, hardware, storage, and network summary
+
+Usage:
+  system_info.zsh [--help]
+
+Examples:
+  system_info.zsh
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help) usage; exit 0 ;;
+    *) ;; # ignore unknown args for now
+  esac
+done
 
 print_header() { print -r -- "\n${C[bold]}$1${C[reset]}"; }
 
@@ -42,4 +62,3 @@ scutil --get LocalHostName 2>/dev/null | sed 's/^/LocalHostName: /' || true
 scutil --get ComputerName 2>/dev/null | sed 's/^/ComputerName: /' || true
 
 success "Done."
-

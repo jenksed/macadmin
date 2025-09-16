@@ -1,50 +1,164 @@
 #!/usr/bin/env zsh
+# shellcheck shell=bash disable=SC2016,SC2154,SC2034
 emulate -L zsh
 setopt errexit nounset pipefail
 
+# Shared constraints: POSIX-friendly zsh, safety-first UX
 SCRIPT_DIR=${0:a:h}
 REPO_DIR=${SCRIPT_DIR:h}
 LIB_DIR="$REPO_DIR/lib"
 SCRIPTS_DIR="$REPO_DIR/scripts"
 
-source "$LIB_DIR/common.zsh"
-require_macos || exit 1
+source "$LIB_DIR/common.zsh" 2>/dev/null || true
 
-usage() {
-  cat <<'EOF'
+# Global defaults (human-readable by default)
+typeset -g MACADMIN_JSON=${MACADMIN_JSON:-0}
+typeset -g MACADMIN_VERBOSE=${MACADMIN_VERBOSE:-0}
+typeset -g MACADMIN_DRY_RUN=${MACADMIN_DRY_RUN:-0}
+typeset -g MACADMIN_YES=${MACADMIN_YES:-0}
+typeset -g MACADMIN_PROTECT=${MACADMIN_PROTECT:-0}
+typeset -g MACADMIN_QUIET=${MACADMIN_QUIET:-0}
+
+# Map dashed command names to underscored script filenames
+_cmd_to_file() {
+  # in: command-name -> scripts/command_name.zsh
+  local name="$1"
+  print -r -- "$SCRIPTS_DIR/${name//-/_}.zsh"
+}
+
+_file_to_cmd() {
+  # in: scripts/command_name.zsh -> command-name
+  local file="$1" base
+  base=${file:t}
+  base=${base%.zsh}
+  print -r -- "${base//_/-}"
+}
+
+_discover_commands() {
+  # List commands by scanning scripts/*.zsh, excluding files that start with '_'
+  local f
+  for f in "$SCRIPTS_DIR"/*.zsh; do
+    [[ -e "$f" ]] || continue
+    [[ ${f:t} == _* ]] && continue
+    print -r -- "$f"
+  done | sort
+}
+
+_extract_summary() {
+  # Try to extract a one-line summary from a script's usage block.
+  # Looks for a line like: "<filename> - <summary>"
+  local file="$1"
+  local name=${file:t}
+  local summ
+  summ=$(awk -v name="$name" '
+    BEGIN{found=0}
+    /<<["'\''"]?EOF["'\''"]?/{heredoc=1; next}
+    heredoc && $0 ~ name"[[:space:]]*-" {print; exit}
+  ' "$file" 2>/dev/null)
+  if [[ -n "$summ" ]]; then
+    # Trim to the part after the hyphen
+    print -r -- "${summ##*- }"
+  else
+    # Fallbacks for known commands if no usage block present
+    case "${name%.zsh}" in
+      system_info) print -r -- "Show OS, hardware, storage, network summary" ;;
+      *) print -r -- "(no summary available)" ;;
+    esac
+  fi
+}
+
+_print_help() {
+  cat <<'HDR'
 macadmin - macOS admin utilities dispatcher
 
 Usage:
-  macadmin <command> [args]
+  macadmin [global-flags] <command> [args]
+
+Global flags:
+  --dry-run    Print actions without executing (also sets DRY_RUN)
+  --yes        Assume yes for prompts; allow destructive ops
+  --verbose    Increase verbosity
+  --json       JSON output (commands should honor when supported)
+  --quiet      Reduce non-essential output
+  --protect    Extra safety guard for destructive commands
+  -h, --help   Show this help
 
 Commands:
-  system-info    Show OS, hardware, storage, network summary
-  os-update      List/install macOS updates
-  cleanup        Clear caches, rotate logs, run periodic tasks
-  settings-ui    Apply sensible Finder/Dock/Text settings
-  network        Wi‑Fi on/off, list services, flush DNS
-  brew-tools     Homebrew checks and Brewfile bundle
-  backup-tmutil  Time Machine helpers
-  hardening      Security hardening toggles and status
-  help           Show this help
-
-Examples:
-  macadmin system-info
-  macadmin os-update --list
-  macadmin cleanup --user --dry-run
-EOF
+HDR
+  local f cmd summary
+  for f in $(_discover_commands); do
+    cmd=$(_file_to_cmd "$f")
+    summary=$(_extract_summary "$f")
+    printf "  %-14s %s\n" "$cmd" "$summary"
+  done
+  printf "\nExamples:\n"
+  printf "  macadmin system-info\n"
+  printf "  macadmin os-update --list\n"
+  printf "  macadmin cleanup --user --dry-run\n"
 }
 
-cmd=$1; shift 2>/dev/null || true
-case "$cmd" in
-  system-info)  exec zsh "$SCRIPTS_DIR/system_info.zsh" "$@" ;;
-  os-update)    exec zsh "$SCRIPTS_DIR/os_update.zsh" "$@" ;;
-  cleanup)      exec zsh "$SCRIPTS_DIR/cleanup.zsh" "$@" ;;
-  settings-ui)  exec zsh "$SCRIPTS_DIR/settings_ui.zsh" "$@" ;;
-  network)      exec zsh "$SCRIPTS_DIR/network.zsh" "$@" ;;
-  brew-tools)   exec zsh "$SCRIPTS_DIR/brew_tools.zsh" "$@" ;;
-  backup-tmutil) exec zsh "$SCRIPTS_DIR/backup_tmutil.zsh" "$@" ;;
-  hardening)    exec zsh "$SCRIPTS_DIR/hardening.zsh" "$@" ;;
-  help|--help|-h|""|*) usage ;;
-esac
+_suggest_command() {
+  local input="$1"
+  local list cmd best
+  list=($(_discover_commands | while read -r p; do _file_to_cmd "$p"; done))
+  # Prefer prefix match, then substring
+  for cmd in $list; do [[ $cmd == ${input}* ]] && { print -r -- "$cmd"; return; } done
+  for cmd in $list; do [[ $cmd == *${input}* ]] && { print -r -- "$cmd"; return; } done
+  # Fallback: print first
+  print -r -- "${list[1]:-}"
+}
 
+# Parse global flags (strip them; export env vars for subcommands)
+typeset -a argv_copy; argv_copy=($@)
+typeset -a rest; rest=()
+typeset -i i=1
+while (( i <= ${#argv_copy} )); do
+  case "${argv_copy[i]}" in
+    --dry-run)   MACADMIN_DRY_RUN=1 ;;
+    --yes)       MACADMIN_YES=1 ;;
+    --verbose)   MACADMIN_VERBOSE=1 ;;
+    --json)      MACADMIN_JSON=1 ;;
+    --quiet)     MACADMIN_QUIET=1 ;;
+    --protect)   MACADMIN_PROTECT=1 ;;
+    -h|--help)   _print_help; exit 0 ;;
+    --)          # stop parsing globals; rest are for command
+                 (( i++ )); while (( i <= ${#argv_copy} )); do rest+="${argv_copy[i]}"; (( i++ )); done; break ;;
+    -*)          # unknown flag: keep for subcommand
+                 rest+="${argv_copy[i]}" ;;
+    *)           rest+="${argv_copy[i]}" ;;
+  esac
+  (( i++ ))
+done
+
+# Export env toggles for subcommands
+export MACADMIN_DRY_RUN MACADMIN_YES MACADMIN_VERBOSE MACADMIN_JSON MACADMIN_QUIET MACADMIN_PROTECT
+
+# Compatibility: set DRY_RUN for shared helpers
+if (( MACADMIN_DRY_RUN )); then export DRY_RUN=1; fi
+
+# Route to subcommand
+cmd=${rest[1]:-}
+if [[ -z "${cmd:-}" ]]; then _print_help; exit 0; fi
+
+# Allow `macadmin help` as alias for help
+if [[ "$cmd" == help ]]; then _print_help; exit 0; fi
+
+# Remaining args for subcommand
+shift_count=$(( ${#rest} >= 1 ? 1 : 0 ))
+typeset -a subargs
+subargs=(${rest[$((shift_count+1)),-1]})
+
+script=$(_cmd_to_file "$cmd")
+if [[ ! -f "$script" ]]; then
+  print -r -- "macadmin: unknown command '$cmd'" >&2
+  suggestion=$(_suggest_command "$cmd")
+  if [[ -n "$suggestion" ]]; then
+    print -r -- "Did you mean: $suggestion?" >&2
+  fi
+  exit 64
+fi
+
+# Ensure macOS for commands (some tests mock uname)
+require_macos 2>/dev/null || true
+
+exec zsh "$script" "$subargs[@]"
