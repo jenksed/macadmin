@@ -5,6 +5,9 @@ setopt errexit nounset pipefail
 
 SCRIPT_DIR=${0:a:h}
 source "$SCRIPT_DIR/../lib/common.zsh"
+source "$SCRIPT_DIR/../lib/argparse.zsh" 2>/dev/null || true
+macadmin_parse_globals "$@" 2>/dev/null || true
+set -- "${MACADMIN_ARGS[@]}"
 require_macos || exit 1
 
 usage() {

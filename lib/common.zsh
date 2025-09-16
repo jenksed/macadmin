@@ -35,7 +35,10 @@ run() {
 
 # Require macOS
 require_macos() {
-  if [[ "$(uname -s)" != "Darwin" ]]; then
+  # Be tolerant of mocks: accept any uname output containing "Darwin".
+  local us
+  us=$(uname -s 2>/dev/null || uname 2>/dev/null || echo "")
+  if [[ "$us" != *Darwin* ]]; then
     error "This script is intended for macOS (Darwin)."
     return 1
   fi
