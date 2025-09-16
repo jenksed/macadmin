@@ -67,6 +67,40 @@ Show per-command help:
 zsh bin/macadmin <command> --help
 ```
 
+## Library Helpers
+
+These helpers are safe to `source` multiple times and are used by the dispatcher and all commands.
+
+- `lib/argparse.zsh`: Parse global flags from `$@`.
+  - Usage within a script:
+    ```
+    source lib/argparse.zsh
+    macadmin_parse_globals "$@"
+    set -- "${MACADMIN_ARGS[@]}"     # remaining args for the command
+    ```
+  - Behavior: sets/exports `MACADMIN_*`; `--quiet` overrides `--verbose`; sets `DRY_RUN=1` when `--dry-run`.
+
+- `lib/log.zsh`: Logging helpers.
+  - Human-readable by default; honors `MACADMIN_QUIET`/`MACADMIN_VERBOSE`.
+  - Functions: `log_info`, `log_warn`, `log_error`, `log_debug`, `log_json <event> <payload-json>`, `confirm_or_exit [prompt]`.
+  - JSON mode (`MACADMIN_JSON=1`) emits one line per event with stable keys `ts`, `level`, `cmd`, `message`, `data`.
+    ```
+    MACADMIN_JSON=1 zsh -c 'source lib/log.zsh; log_json update "{\"ok\":true}"'
+    # {"ts":"2025-01-01T00:00:00Z","level":"event","cmd":"zsh","message":"update","data":{"ok":true}}
+    ```
+
+- `lib/exitcodes.zsh`: Exports sysexits-style constants (e.g., `EX_USAGE=64`).
+
+## Direct Script Execution
+
+Commands accept the same global flags when run directly, thanks to `lib/argparse.zsh` being sourced in each script.
+
+```
+zsh scripts/os_update.zsh --list --quiet
+zsh scripts/cleanup.zsh --user --dry-run --verbose
+MACADMIN_JSON=1 zsh scripts/network.zsh services
+```
+
 ## Safety & Conventions
 
 - Shell: `zsh` with `setopt errexit nounset pipefail`.
@@ -74,6 +108,8 @@ zsh bin/macadmin <command> --help
 - Destructive actions must be gated by `--yes` and support `--dry-run`.
 - `require_sudo` prompts once when a script needs admin rights.
 - Scripts should avoid Bashisms unless guarded; aim for POSIX-friendly zsh.
+
+JSON logging is intended for machine consumption of logs and events; command core output remains human-readable unless explicitly documented.
 
 ## Developing New Commands
 
