@@ -1,0 +1,50 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+setopt errexit nounset pipefail
+
+SCRIPT_DIR=${0:a:h}
+REPO_DIR=${SCRIPT_DIR:h}
+LIB_DIR="$REPO_DIR/lib"
+SCRIPTS_DIR="$REPO_DIR/scripts"
+
+source "$LIB_DIR/common.zsh"
+require_macos || exit 1
+
+usage() {
+  cat <<'EOF'
+macadmin - macOS admin utilities dispatcher
+
+Usage:
+  macadmin <command> [args]
+
+Commands:
+  system-info    Show OS, hardware, storage, network summary
+  os-update      List/install macOS updates
+  cleanup        Clear caches, rotate logs, run periodic tasks
+  settings-ui    Apply sensible Finder/Dock/Text settings
+  network        Wi‑Fi on/off, list services, flush DNS
+  brew-tools     Homebrew checks and Brewfile bundle
+  backup-tmutil  Time Machine helpers
+  hardening      Security hardening toggles and status
+  help           Show this help
+
+Examples:
+  macadmin system-info
+  macadmin os-update --list
+  macadmin cleanup --user --dry-run
+EOF
+}
+
+cmd=$1; shift 2>/dev/null || true
+case "$cmd" in
+  system-info)  exec zsh "$SCRIPTS_DIR/system_info.zsh" "$@" ;;
+  os-update)    exec zsh "$SCRIPTS_DIR/os_update.zsh" "$@" ;;
+  cleanup)      exec zsh "$SCRIPTS_DIR/cleanup.zsh" "$@" ;;
+  settings-ui)  exec zsh "$SCRIPTS_DIR/settings_ui.zsh" "$@" ;;
+  network)      exec zsh "$SCRIPTS_DIR/network.zsh" "$@" ;;
+  brew-tools)   exec zsh "$SCRIPTS_DIR/brew_tools.zsh" "$@" ;;
+  backup-tmutil) exec zsh "$SCRIPTS_DIR/backup_tmutil.zsh" "$@" ;;
+  hardening)    exec zsh "$SCRIPTS_DIR/hardening.zsh" "$@" ;;
+  help|--help|-h|""|*) usage ;;
+esac
+
