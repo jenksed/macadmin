@@ -2,7 +2,7 @@
 emulate -L zsh
 setopt errexit nounset pipefail
 
-# Colors
+# Colors for human-readable mode only
 typeset -gA C
 C=(
   reset $'\e[0m'
@@ -14,11 +14,15 @@ C=(
   blue  $'\e[34m'
 )
 
-# Logging
-info()    { print -r -- "${C[blue]}[INFO]${C[reset]} $*"; }
-warn()    { print -r -- "${C[yellow]}[WARN]${C[reset]} $*" >&2; }
-error()   { print -r -- "${C[red]}[ERROR]${C[reset]} $*" >&2; }
-success() { print -r -- "${C[green]}[OK]${C[reset]} $*"; }
+# Wire in logging + exit codes (safe to re-source)
+{ local _dir=${(%):-%N}; _dir=${_dir:A:h}; [[ -r "$_dir/log.zsh" ]] && source "$_dir/log.zsh"; } || true
+{ local _dir=${(%):-%N}; _dir=${_dir:A:h}; [[ -r "$_dir/exitcodes.zsh" ]] && source "$_dir/exitcodes.zsh"; } || true
+
+# Backward-compatible logging shims calling new log_* helpers
+info()    { (( ${MACADMIN_JSON:-0} )) && { log_info "$@"; return; }; print -r -- "${C[blue]}[INFO]${C[reset]} $*"; }
+warn()    { (( ${MACADMIN_JSON:-0} )) && { log_warn "$@"; return; }; print -r -- "${C[yellow]}[WARN]${C[reset]} $*" >&2; }
+error()   { (( ${MACADMIN_JSON:-0} )) && { log_error "$@"; return; }; print -r -- "${C[red]}[ERROR]${C[reset]} $*" >&2; }
+success() { (( ${MACADMIN_JSON:-0} )) && { log_info "$@"; return; }; print -r -- "${C[green]}[OK]${C[reset]} $*"; }
 
 # Dry-run aware runner
 run() {
@@ -67,4 +71,3 @@ confirm() {
 }
 
 die() { error "$*"; return 1 }
-

@@ -10,6 +10,8 @@ LIB_DIR="$REPO_DIR/lib"
 SCRIPTS_DIR="$REPO_DIR/scripts"
 
 source "$LIB_DIR/common.zsh" 2>/dev/null || true
+source "$LIB_DIR/argparse.zsh" 2>/dev/null || true
+source "$LIB_DIR/exitcodes.zsh" 2>/dev/null || true
 
 # Global defaults (human-readable by default)
 typeset -g MACADMIN_JSON=${MACADMIN_JSON:-0}
@@ -108,33 +110,12 @@ _suggest_command() {
   print -r -- "${list[1]:-}"
 }
 
-# Parse global flags (strip them; export env vars for subcommands)
-typeset -a argv_copy; argv_copy=($@)
-typeset -a rest; rest=()
-typeset -i i=1
-while (( i <= ${#argv_copy} )); do
-  case "${argv_copy[i]}" in
-    --dry-run)   MACADMIN_DRY_RUN=1 ;;
-    --yes)       MACADMIN_YES=1 ;;
-    --verbose)   MACADMIN_VERBOSE=1 ;;
-    --json)      MACADMIN_JSON=1 ;;
-    --quiet)     MACADMIN_QUIET=1 ;;
-    --protect)   MACADMIN_PROTECT=1 ;;
-    -h|--help)   _print_help; exit 0 ;;
-    --)          # stop parsing globals; rest are for command
-                 (( i++ )); while (( i <= ${#argv_copy} )); do rest+="${argv_copy[i]}"; (( i++ )); done; break ;;
-    -*)          # unknown flag: keep for subcommand
-                 rest+="${argv_copy[i]}" ;;
-    *)           rest+="${argv_copy[i]}" ;;
-  esac
-  (( i++ ))
-done
-
-# Export env toggles for subcommands
-export MACADMIN_DRY_RUN MACADMIN_YES MACADMIN_VERBOSE MACADMIN_JSON MACADMIN_QUIET MACADMIN_PROTECT
-
-# Compatibility: set DRY_RUN for shared helpers
-if (( MACADMIN_DRY_RUN )); then export DRY_RUN=1; fi
+# Parse global flags using library (strips globals; sets MACADMIN_ARGS)
+case "${1:-}" in
+  -h|--help) _print_help; exit 0 ;;
+esac
+macadmin_parse_globals "$@"
+typeset -a rest; rest=(${MACADMIN_ARGS[@]})
 
 # Route to subcommand
 cmd=${rest[1]:-}
@@ -155,10 +136,11 @@ if [[ ! -f "$script" ]]; then
   if [[ -n "$suggestion" ]]; then
     print -r -- "Did you mean: $suggestion?" >&2
   fi
-  exit 64
+  exit ${EX_USAGE:-64}
 fi
 
 # Ensure macOS for commands (some tests mock uname)
 require_macos 2>/dev/null || true
 
+export MACADMIN_CMD="$cmd"
 exec zsh "$script" "$subargs[@]"
