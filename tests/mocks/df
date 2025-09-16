@@ -1,0 +1,6 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+echo "Filesystem  Size Used Avail Capacity iused ifree %iused  Mounted on"
+echo "/dev/disk1 100G  10G  90G    10%       1     1     1%   /"
+exit 0
+

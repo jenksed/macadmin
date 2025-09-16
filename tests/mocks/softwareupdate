@@ -1,0 +1,20 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+case "$1" in
+  --list)
+    cat <<'EOF'
+Software Update Tool
+
+Finding available software
+Software Update found the following new or updated software:
+* Label: MockUpdate-1
+	Title: Mock Update, Version: 1.0, Size: 1234KiB, Recommended: YES,
+EOF
+    ;;
+  --install)
+    echo "Installing updates (mock)..."
+    ;;
+  *) echo "softwareupdate mock: $*" ;;
+esac
+exit 0
+

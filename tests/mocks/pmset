@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+echo "Now drawing from 'AC Power'"
+exit 0
+

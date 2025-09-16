@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+case "$1" in
+  --getglobalstate) echo "Firewall is enabled. (State = 1)" ;;
+  --setglobalstate) : ;;
+  *) echo "socketfilterfw(mock): $*" ;;
+esac
+exit 0
+

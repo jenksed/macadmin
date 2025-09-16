@@ -1,0 +1,10 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+case "$2" in
+  HostName) echo "mock-host" ;;
+  LocalHostName) echo "mock-local" ;;
+  ComputerName) echo "mock-computer" ;;
+  *) echo "scutil(mock): $*" ;;
+esac
+exit 0
+

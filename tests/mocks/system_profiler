@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+echo "Hardware:\n\n  Hardware Overview:\n\n    Model Name: Mock"
+exit 0
+

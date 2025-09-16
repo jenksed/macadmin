@@ -1,0 +1,25 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+if [[ "$1" == "-listallnetworkservices" ]]; then
+  cat <<'EOF'
+An asterisk (*) denotes that a network service is disabled.
+Wi-Fi
+Ethernet
+Thunderbolt Bridge
+EOF
+  exit 0
+fi
+if [[ "$1" == "-listallhardwareports" ]]; then
+  cat <<'EOF'
+Hardware Port: Wi-Fi
+Device: en0
+EOF
+  exit 0
+fi
+if [[ "$1" == "-setairportpower" ]]; then
+  echo "setairportpower(mock): $*"
+  exit 0
+fi
+echo "networksetup(mock): $*"
+exit 0
+

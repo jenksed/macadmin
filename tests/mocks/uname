@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+echo "Darwin mockhost 24.0.0 Darwin Kernel Version 24.0.0: MOCK arm64"
+exit 0
+

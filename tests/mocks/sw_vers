@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+cat <<'EOF'
+ProductName:		macOS
+ProductVersion:		15.6.1
+BuildVersion:		24G90
+EOF
+exit 0
+

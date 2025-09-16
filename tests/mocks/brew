@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+if [[ "$1" == "--version" ]]; then
+  echo "Homebrew 4.3.0"
+  exit 0
+fi
+if [[ "$1" == "bundle" ]]; then
+  echo "brew bundle (mock)"
+  exit 0
+fi
+echo "brew(mock): $*"
+exit 0
+

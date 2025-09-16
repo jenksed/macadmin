@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+if [[ "$1" == "hw.memsize" ]]; then
+  echo "hw.memsize: 8589934592"
+else
+  echo "sysctl(mock): $*"
+fi
+exit 0
+

@@ -1,0 +1,25 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+case "$1" in
+  status)
+    echo "    Backup session: Not running"
+    ;;
+  listbackups)
+    echo "/Volumes/Backup/Backups.backupdb/MockMachine/2025-09-16-010101"
+    ;;
+  startbackup)
+    echo "Starting backup (mock)"
+    ;;
+  thinlocalsnapshots)
+    echo "Thinning localsnapshots to $4%"
+    ;;
+  addexclusion)
+    echo "Excluding $2"
+    ;;
+  removeexclusion)
+    echo "Removing exclusion $2"
+    ;;
+  *) echo "tmutil(mock): $*" ;;
+esac
+exit 0
+

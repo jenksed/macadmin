@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+if [[ "$1" == "getifaddr" && "$2" == "en0" ]]; then
+  echo "192.168.0.2"
+  exit 0
+fi
+exit 1
+

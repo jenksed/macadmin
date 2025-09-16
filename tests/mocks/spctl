@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+case "$1" in
+  --status) echo "assessments enabled" ;;
+  --master-enable|--master-disable) : ;;
+  *) echo "spctl(mock): $*" ;;
+esac
+exit 0
+

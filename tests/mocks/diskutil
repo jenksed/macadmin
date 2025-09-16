@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+echo "Mock diskutil list"
+exit 0
+
