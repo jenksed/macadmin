@@ -141,39 +141,8 @@ _ns_device_for_service() {
   print -r -- "$dev"
 }
 
-# --- JSON helpers ---
-_emit_json_obj() {
-  # Minimal flat-object serializer: _emit_json_obj key=value ...
-  local first=1 kv key val
-  printf '{'
-  for kv in "$@"; do
-    key=${kv%%=*}
-    val=${kv#*=}
-    if (( first )); then first=0; else printf ','; fi
-    case "$val" in
-      true|false|null) printf '"%s":%s' "$key" "$val" ;;
-      *) printf '"%s":"%s"' "$key" "${val//\"/\\\"}" ;;
-    esac
-  done
-  printf '}'
-}
-
-_emit_pretty_obj() {
-  # Pretty-print a flat object using provided key=value pairs
-  local kv key val
-  printf '{\n'
-  local first=1
-  for kv in "$@"; do
-    key=${kv%%=*}
-    val=${kv#*=}
-    if (( first )); then first=0; else printf ',\n'; fi
-    case "$val" in
-      true|false|null) printf '  "%s": %s' "$key" "$val" ;;
-      *) printf '  "%s": "%s"' "$key" "${val//\"/\\\"}" ;;
-    esac
-  done
-  printf '\n}'
-}
+# --- JSON helpers (from lib/log.zsh) ---
+# Using macadmin_json_obj and macadmin_json_pretty_obj
 
 # --- Subcommands ---
 
@@ -202,13 +171,13 @@ case "$subcmd" in
           [[ -z "$svc" ]] && continue
           if (( first )); then first=0; else printf ' ,\n'; fi
           printf '    '
-          _emit_pretty_obj service="$svc" enabled=$([[ "$en" == 1 ]] && echo true || echo false)
+          macadmin_json_pretty_obj service="$svc" enabled=$([[ "$en" == 1 ]] && echo true || echo false)
         done < <(_ns_services)
         printf '\n  ]\n}\n'
       else
         while IFS=$'\t' read -r en svc; do
           [[ -z "$svc" ]] && continue
-          _emit_json_obj service="$svc" enabled=$([[ "$en" == 1 ]] && echo true || echo false)
+          macadmin_json_obj service="$svc" enabled=$([[ "$en" == 1 ]] && echo true || echo false)
           printf '\n'
         done < <(_ns_services)
       fi
@@ -240,7 +209,7 @@ case "$subcmd" in
     fi
 
     if (( MACADMIN_JSON )); then
-      _emit_json_obj action="wifi" service="$svc" device="$dev" state="$state"
+      macadmin_json_obj action="wifi" service="$svc" device="$dev" state="$state"
       printf '\n'
     else
       log_info "Setting Wi‑Fi ($svc${dev:+/$dev}) $state"
@@ -280,8 +249,8 @@ case "$subcmd" in
           run sudo discoveryutil udnsflushcaches || true
         fi
         if (( MACADMIN_JSON )); then
-          if (( opt_pretty )); then _emit_pretty_obj action="dns_flush" ok=true; printf '\n';
-          else _emit_json_obj action="dns_flush" ok=true; printf '\n'; fi
+          if (( opt_pretty )); then macadmin_json_pretty_obj action="dns_flush" ok=true; printf '\n';
+          else macadmin_json_obj action="dns_flush" ok=true; printf '\n'; fi
         fi
         ;;
       -h|--help|"" ) usage; exit 0 ;;
@@ -322,8 +291,8 @@ case "$subcmd" in
             dns_aaaa_ok=$([[ $aaaa_ok == true ]] && echo true || echo false)
             captive_ok=$([[ $captive_ok == true ]] && echo true || echo false)
           )
-          if (( opt_pretty )); then _emit_pretty_obj "$kv[@]"; printf '\n';
-          else _emit_json_obj "$kv[@]"; printf '\n'; fi
+          if (( opt_pretty )); then macadmin_json_pretty_obj "$kv[@]"; printf '\n';
+          else macadmin_json_obj "$kv[@]"; printf '\n'; fi
         else
           log_info "Gateway: ${gw:-unknown} (reachable: $([[ $ping_ok == true ]] && echo yes || echo no))"
           log_info "DNS A(apple.com): $([[ $a_ok == true ]] && echo ok || echo fail)  AAAA: $([[ $aaaa_ok == true ]] && echo ok || echo fail)"

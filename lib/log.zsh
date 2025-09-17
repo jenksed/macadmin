@@ -132,3 +132,44 @@ confirm_or_exit() {
   log_error "Aborted by user"
   return $EX_NOPERM
 }
+
+
+# Portable JSON emitters for flat objects (shared across commands)
+macadmin_json_obj() {
+  # macadmin_json_obj key=value ... (values: true/false/null bare; others escaped strings)
+  emulate -L zsh
+  setopt errexit nounset pipefail
+  local first=1 kv key val
+  printf '{'
+  for kv in "$@"; do
+    key=${kv%%=*}
+    val=${kv#*=}
+    if (( first )); then first=0; else printf ','; fi
+    case "$val" in
+      true|false|null) printf '"%s":%s' "$key" "$val" ;;
+      *) printf '"%s":"%s"' "$key" "$(_json_escape "$val")" ;;
+    esac
+  done
+  printf '}'
+}
+
+macadmin_json_pretty_obj() {
+  # macadmin_json_pretty_obj key=value ... (indented pretty object)
+  emulate -L zsh
+  setopt errexit nounset pipefail
+  local first=1 kv key val
+  printf '{
+'
+  for kv in "$@"; do
+    key=${kv%%=*}
+    val=${kv#*=}
+    if (( first )); then first=0; else printf ',
+'; fi
+    case "$val" in
+      true|false|null) printf '  "%s": %s' "$key" "$val" ;;
+      *) printf '  "%s": "%s"' "$key" "$(_json_escape "$val")" ;;
+    esac
+  done
+  printf '
+}'
+}
