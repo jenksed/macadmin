@@ -15,7 +15,7 @@ usage() {
 system_info.zsh - print stable system key/value pairs or JSON
 
 Usage:
-  system_info.zsh [--json]
+  system_info.zsh [--json] [--pretty]
 
 Outputs:
   - Human-readable: key: value lines
@@ -24,12 +24,15 @@ Outputs:
 Examples:
   system_info.zsh
   system_info.zsh --json | jq -r .product_version
+  system_info.zsh --pretty   # pretty-printed JSON
 EOF
 }
 
+typeset -i PRETTY=0
 for arg in "$@"; do
   case "$arg" in
     -h|--help) usage; exit 0 ;;
+    --pretty) PRETTY=1 ;;
   esac
 done
 
@@ -132,20 +135,35 @@ typeset -g DISK_FREE_GB; DISK_FREE_GB=$(_disk_gb free)
 typeset -g IFACES_JSON; IFACES_JSON=$(_interfaces_json_fragment)
 typeset -g UPTIME_SEC; UPTIME_SEC=$(_uptime_seconds)
 
-if (( MACADMIN_JSON )); then
-  printf '{'
-  printf '"product_version":"%s"' "$(_json_escape "$PRODUCT_VERSION")"
-  printf ',"build":"%s"' "$(_json_escape "$BUILD")"
-  printf ',"model_id":"%s"' "$(_json_escape "${MODEL_ID:-}")"
-  printf ',"chip":"%s"' "$(_json_escape "${CHIP:-}")"
-  printf ',"memory_gb":%s' "${MEM_GB:-0}"
-  printf ',"primary_volume":"%s"' "$(_json_escape "$PRIMARY_VOL")"
-  printf ',"disk_total_gb":%s' "${DISK_TOTAL_GB:-0}"
-  printf ',"disk_free_gb":%s' "${DISK_FREE_GB:-0}"
-  printf ',"interfaces":%s' "$IFACES_JSON"
-  printf ',"uptime_seconds":%s' "${UPTIME_SEC:-0}"
-  printf '}'
-  printf '\n'
+if (( MACADMIN_JSON || PRETTY )); then
+  if (( PRETTY )); then
+    printf '{\n'
+    printf '  "product_version": "%s",\n' "$(_json_escape "$PRODUCT_VERSION")"
+    printf '  "build": "%s",\n' "$(_json_escape "$BUILD")"
+    printf '  "model_id": "%s",\n' "$(_json_escape "${MODEL_ID:-}")"
+    printf '  "chip": "%s",\n' "$(_json_escape "${CHIP:-}")"
+    printf '  "memory_gb": %s,\n' "${MEM_GB:-0}"
+    printf '  "primary_volume": "%s",\n' "$(_json_escape "$PRIMARY_VOL")"
+    printf '  "disk_total_gb": %s,\n' "${DISK_TOTAL_GB:-0}"
+    printf '  "disk_free_gb": %s,\n' "${DISK_FREE_GB:-0}"
+    printf '  "interfaces": %s,\n' "$IFACES_JSON"
+    printf '  "uptime_seconds": %s\n' "${UPTIME_SEC:-0}"
+    printf '}\n'
+  else
+    printf '{'
+    printf '"product_version":"%s"' "$(_json_escape "$PRODUCT_VERSION")"
+    printf ',"build":"%s"' "$(_json_escape "$BUILD")"
+    printf ',"model_id":"%s"' "$(_json_escape "${MODEL_ID:-}")"
+    printf ',"chip":"%s"' "$(_json_escape "${CHIP:-}")"
+    printf ',"memory_gb":%s' "${MEM_GB:-0}"
+    printf ',"primary_volume":"%s"' "$(_json_escape "$PRIMARY_VOL")"
+    printf ',"disk_total_gb":%s' "${DISK_TOTAL_GB:-0}"
+    printf ',"disk_free_gb":%s' "${DISK_FREE_GB:-0}"
+    printf ',"interfaces":%s' "$IFACES_JSON"
+    printf ',"uptime_seconds":%s' "${UPTIME_SEC:-0}"
+    printf '}'
+    printf '\n'
+  fi
   exit 0
 fi
 
