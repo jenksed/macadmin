@@ -52,7 +52,7 @@ Unknown commands exit with code `64` and a suggestion.
 
 Each command supports `--help` via its script. A one‑line summary is shown in `macadmin help`.
 
-- `system-info`: Show OS, hardware, storage, network summary.
+- `system-info`: Show OS, hardware, storage, network summary. Supports `--json` (single-line, deterministic order) and `--pretty` (pretty-printed JSON).
 - `os-update`: List/install macOS updates via `softwareupdate`.
 - `cleanup`: Clear caches, rotate logs, run periodic tasks.
 - `settings-ui`: Apply sensible Finder/Dock/Text settings.
@@ -65,6 +65,14 @@ Show per-command help:
 
 ```
 zsh bin/macadmin <command> --help
+```
+
+System info examples:
+
+```
+zsh bin/macadmin system-info                 # key: value lines
+zsh bin/macadmin system-info --json | jq .   # compact JSON
+zsh bin/macadmin system-info --pretty        # pretty JSON
 ```
 
 ## Library Helpers
