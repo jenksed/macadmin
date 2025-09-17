@@ -40,3 +40,60 @@ PATH="$HERE/mocks:$PATH" MACADMIN_JSON=1 run_cmd R -- zsh scripts/network.zsh di
 assert_exit0 $R_STATUS "network: diag quick json exits 0"
 assert_contains "$R_OUT" '"check":"quick"' "network: diag quick json has check key"
 assert_contains "$R_OUT" '"ping_ok":true' "network: diag quick json has ping_ok true"
+
+
+# services: JSON output
+PATH="$HERE/mocks:$PATH" run_cmd R -- zsh scripts/network.zsh services --json
+assert_exit0 $R_STATUS "network: services json exits 0"
+assert_contains "$R_OUT" '"service":"Wi-Fi"' "network: services json contains Wi-Fi"
+assert_contains "$R_OUT" '"enabled":true' "network: services json marks enabled"
+
+# dns: JSON output (dry-run)
+PATH="$HERE/mocks:$PATH" run_cmd R -- zsh scripts/network.zsh dns --flush --dry-run --json
+assert_exit0 $R_STATUS "network: dns flush json exits 0"
+assert_contains "$R_OUT" '"action":"dns_flush"' "network: dns flush json has action"
+assert_contains "$R_OUT" '"ok":true' "network: dns flush json ok true"
+
+# wifi: honors config override for custom service name
+tmp="$HERE/tmp_net_ovr.$$"; rm -rf "$tmp"; mkdir -p "$tmp/home" "$tmp/bin"
+cat > "$tmp/home/.macadminrc" <<EOF
+[network]
+wifi_default_service = "Corp Wi-Fi"
+EOF
+cat > "$tmp/bin/networksetup" <<'EOF'
+#!/usr/bin/env zsh
+emulate -L zsh
+case "$1" in
+  -listallnetworkservices)
+    cat <<LS
+An asterisk (*) denotes that a network service is disabled.
+Corp Wi-Fi
+Ethernet
+Thunderbolt Bridge
+LS
+    ;;
+  -listnetworkserviceorder)
+    cat <<ORD
+(1) Corp Wi-Fi
+      Hardware Port: Wi-Fi, Device: en0
+(2) Ethernet
+      Hardware Port: Ethernet, Device: en1
+ORD
+    ;;
+  -listallhardwareports)
+    cat <<HP
+Hardware Port: Wi-Fi
+Device: en0
+HP
+    ;;
+  -setairportpower)
+    print -r -- "setairportpower(mock-ovr): $*" ;;
+  *) print -r -- "networksetup(mock-ovr): $*" ;;
+
+esac
+exit 0
+EOF
+chmod +x "$tmp/bin/networksetup"
+HOME="$tmp/home" PATH="$tmp/bin:$HERE/mocks:$PATH" run_cmd R -- zsh scripts/network.zsh wifi --off --dry-run
+assert_exit0 $R_STATUS "network: wifi override dry-run exits 0"
+assert_contains "$R_OUT" "networksetup -setairportpower en0 off" "network: wifi override uses en0 and off"
