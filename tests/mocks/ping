@@ -1,0 +1,4 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+# Pretend a single ping succeeds quickly
+exit 0

@@ -1,5 +1,12 @@
 #!/usr/bin/env zsh
 emulate -L zsh
+if [[ "$1" == "-q" && "$2" == host && "$3" == "-a" && "$4" == name && "$5" == apple.com ]]; then
+  cat <<'OUT'
+name: apple.com
+ip_address: 17.253.144.10
+ipv6_address: 2606:2800:10c::1725:900a
+OUT
+  exit 0
+fi
 echo "dscacheutil(mock): $*"
 exit 0
-

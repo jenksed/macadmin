@@ -1,0 +1,9 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+# Emulate curl -w '%{http_code}'
+if [[ "$*" == *hotspot-detect.html* ]]; then
+  print -r -- 200
+  exit 0
+fi
+print -r -- 000
+exit 0

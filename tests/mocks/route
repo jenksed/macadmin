@@ -1,0 +1,14 @@
+#!/usr/bin/env zsh
+emulate -L zsh
+if [[ "$*" == *"get default"* ]]; then
+  cat <<EOF
+   route to: default
+destination: default
+     mask: default
+  gateway: 192.0.2.1
+        interface: en0
+EOF
+  exit 0
+fi
+print -r -- "route(mock): $*"
+exit 0
