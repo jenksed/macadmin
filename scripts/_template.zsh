@@ -30,7 +30,8 @@ done
 
 # Example top-level behavior
 if (( ${MACADMIN_JSON:-0} )); then
-  printf '{"ok":true}\n'
+  # Use shared JSON emitter for consistency
+  macadmin_json_obj ok=true; printf '\n'
 else
   printf 'Template executed.\n'
 fi
