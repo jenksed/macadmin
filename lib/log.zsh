@@ -140,17 +140,20 @@ macadmin_json_obj() {
   emulate -L zsh
   setopt errexit nounset pipefail
   local first=1 kv key val
-  printf '{'
+  printf '{
+'
   for kv in "$@"; do
     key=${kv%%=*}
     val=${kv#*=}
-    if (( first )); then first=0; else printf ','; fi
+    if (( first )); then first=0; else printf ',
+'; fi
     case "$val" in
       true|false|null) printf '"%s":%s' "$key" "$val" ;;
       *) printf '"%s":"%s"' "$key" "$(_json_escape "$val")" ;;
     esac
   done
-  printf '}'
+  printf '
+}'
 }
 
 macadmin_json_pretty_obj() {
@@ -174,19 +177,20 @@ macadmin_json_pretty_obj() {
 }'
 }
 
-
 # KV-style helpers: accept key=value pairs; use key:=value to indicate raw JSON value (no quoting)
 macadmin_json_obj_kv() {
   emulate -L zsh
   setopt errexit nounset pipefail
   local first=1 kv key val raw
-  printf '{'
+  printf '{
+'
   for kv in "$@"; do
     key=${kv%%=*}
     val=${kv#*=}
     raw=0
     [[ ${key[-1]} == ':' ]] && { raw=1; key=${key%:}; }
-    if (( first )); then first=0; else printf ','; fi
+    if (( first )); then first=0; else printf ',
+'; fi
     if (( raw )); then
       printf '"%s":%s' "$key" "$val"
     else
@@ -196,7 +200,8 @@ macadmin_json_obj_kv() {
       esac
     fi
   done
-  printf '}'
+  printf '
+}'
 }
 
 macadmin_json_pretty_obj_kv() {
@@ -224,3 +229,36 @@ macadmin_json_pretty_obj_kv() {
   printf '
 }'
 }
+
+# Pretty-print a JSON array from a list of JSON objects
+# Usage:
+#   macadmin_json_pretty_array '{"a":1}' '{"b":2}'
+#   printf '%s
+' '{"a":1}' '{"b":2}' | macadmin_json_pretty_array
+macadmin_json_pretty_array() {
+  emulate -L zsh
+  setopt errexit nounset pipefail
+  local -a items
+  items=()
+  if (( $# > 0 )); then
+    items=("$@")
+  else
+    local line
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      items+="$line"
+    done
+  fi
+  printf '[
+'
+  local i=1
+  while (( i <= ${#items[@]} )); do
+    printf '  %s' "${items[i]}"
+    (( i < ${#items[@]} )) && printf ',
+'
+    (( i++ ))
+  done
+  printf '
+]'
+}
+
