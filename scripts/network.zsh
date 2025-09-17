@@ -19,6 +19,7 @@ Usage:
   network.zsh wifi --on|--off
   network.zsh dns --flush
   network.zsh diag --quick
+  # Add --json for machine output; add --pretty to pretty-print JSON.
 
 Flags:
   --dry-run   Print actions without executing
@@ -150,14 +151,40 @@ _emit_json_obj() {
     val=${kv#*=}
     if (( first )); then first=0; else printf ','; fi
     case "$val" in
-      true|false|null|[0-9]*) printf '"%s":%s' "$key" "$val" ;;
+      true|false|null) printf '"%s":%s' "$key" "$val" ;;
       *) printf '"%s":"%s"' "$key" "${val//\"/\\\"}" ;;
     esac
   done
   printf '}'
 }
 
+_emit_pretty_obj() {
+  # Pretty-print a flat object using provided key=value pairs
+  local kv key val
+  printf '{\n'
+  local first=1
+  for kv in "$@"; do
+    key=${kv%%=*}
+    val=${kv#*=}
+    if (( first )); then first=0; else printf ',\n'; fi
+    case "$val" in
+      true|false|null) printf '  "%s": %s' "$key" "$val" ;;
+      *) printf '  "%s": "%s"' "$key" "${val//\"/\\\"}" ;;
+    esac
+  done
+  printf '\n}'
+}
+
 # --- Subcommands ---
+
+typeset -i opt_pretty=0
+
+# Detect optional --pretty anywhere in args (non-global)
+for a in "$@"; do
+  case "$a" in
+    --pretty) opt_pretty=1 ;;
+  esac
+done
 
 subcmd=${1:-}
 case "$subcmd" in
@@ -167,11 +194,24 @@ case "$subcmd" in
     # Backward-compatible: no --list flag needed
     log_info "Listing network services..."
     if (( MACADMIN_JSON )); then
-      while IFS=$'\t' read -r en svc; do
-        [[ -z "$svc" ]] && continue
-        _emit_json_obj service="$svc" enabled=$([[ "$en" == 1 ]] && echo true || echo false)
-        printf '\n'
-      done < <(_ns_services)
+      if (( opt_pretty )); then
+        # Aggregate and pretty print as one JSON object with array
+        printf '{\n  "services": [\n'
+        local first=1
+        while IFS=$'\t' read -r en svc; do
+          [[ -z "$svc" ]] && continue
+          if (( first )); then first=0; else printf ' ,\n'; fi
+          printf '    '
+          _emit_pretty_obj service="$svc" enabled=$([[ "$en" == 1 ]] && echo true || echo false)
+        done < <(_ns_services)
+        printf '\n  ]\n}\n'
+      else
+        while IFS=$'\t' read -r en svc; do
+          [[ -z "$svc" ]] && continue
+          _emit_json_obj service="$svc" enabled=$([[ "$en" == 1 ]] && echo true || echo false)
+          printf '\n'
+        done < <(_ns_services)
+      fi
     else
       networksetup -listallnetworkservices
     fi
@@ -239,7 +279,10 @@ case "$subcmd" in
           run sudo killall -HUP mDNSResponderHelper || true
           run sudo discoveryutil udnsflushcaches || true
         fi
-        (( MACADMIN_JSON )) && { _emit_json_obj action="dns_flush" ok=true; printf '\n'; }
+        if (( MACADMIN_JSON )); then
+          if (( opt_pretty )); then _emit_pretty_obj action="dns_flush" ok=true; printf '\n';
+          else _emit_json_obj action="dns_flush" ok=true; printf '\n'; fi
+        fi
         ;;
       -h|--help|"" ) usage; exit 0 ;;
       *) log_error "Unknown dns subcommand"; usage; exit ${EX_USAGE:-64} ;;
@@ -270,8 +313,17 @@ case "$subcmd" in
         if [[ "$code" == 200 ]]; then captive_ok=true; fi
 
         if (( MACADMIN_JSON )); then
-          _emit_json_obj check="quick" gateway="$gw" ping_ok=$([[ $ping_ok == true ]] && echo true || echo false) dns_a_ok=$([[ $a_ok == true ]] && echo true || echo false) dns_aaaa_ok=$([[ $aaaa_ok == true ]] && echo true || echo false) captive_ok=$([[ $captive_ok == true ]] && echo true || echo false)
-          printf '\n'
+          local kv
+          kv=(
+            check="quick"
+            gateway="$gw"
+            ping_ok=$([[ $ping_ok == true ]] && echo true || echo false)
+            dns_a_ok=$([[ $a_ok == true ]] && echo true || echo false)
+            dns_aaaa_ok=$([[ $aaaa_ok == true ]] && echo true || echo false)
+            captive_ok=$([[ $captive_ok == true ]] && echo true || echo false)
+          )
+          if (( opt_pretty )); then _emit_pretty_obj "$kv[@]"; printf '\n';
+          else _emit_json_obj "$kv[@]"; printf '\n'; fi
         else
           log_info "Gateway: ${gw:-unknown} (reachable: $([[ $ping_ok == true ]] && echo yes || echo no))"
           log_info "DNS A(apple.com): $([[ $a_ok == true ]] && echo ok || echo fail)  AAAA: $([[ $aaaa_ok == true ]] && echo ok || echo fail)"
