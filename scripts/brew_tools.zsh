@@ -43,10 +43,19 @@ _brew_info_json() {
     path=$(command -v brew)
     ver=$(brew --version 2>/dev/null | head -1)
   fi
-  macadmin_json_obj found=$([[ $found -eq 1 ]] && echo true || echo false) path="$path" version="$ver" arch="$(_arch)" prefix_guess="$(_brew_prefix_guess)"
+  if (( opt_pretty )); then
+    macadmin_json_pretty_obj found=$([[ $found -eq 1 ]] && echo true || echo false) path="$path" version="$ver" arch="$(_arch)" prefix_guess="$(_brew_prefix_guess)"
+  else
+    macadmin_json_obj found=$([[ $found -eq 1 ]] && echo true || echo false) path="$path" version="$ver" arch="$(_brew_prefix_guess)"
+  fi
   printf '
 '
 }
+
+typeset -i opt_pretty=0
+for a in "$@"; do
+  [[ "$a" == "--pretty" ]] && opt_pretty=1
+done
 
 cmd=${1:-}
 case "$cmd" in
