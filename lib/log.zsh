@@ -173,3 +173,54 @@ macadmin_json_pretty_obj() {
   printf '
 }'
 }
+
+
+# KV-style helpers: accept key=value pairs; use key:=value to indicate raw JSON value (no quoting)
+macadmin_json_obj_kv() {
+  emulate -L zsh
+  setopt errexit nounset pipefail
+  local first=1 kv key val raw
+  printf '{'
+  for kv in "$@"; do
+    key=${kv%%=*}
+    val=${kv#*=}
+    raw=0
+    [[ ${key[-1]} == ':' ]] && { raw=1; key=${key%:}; }
+    if (( first )); then first=0; else printf ','; fi
+    if (( raw )); then
+      printf '"%s":%s' "$key" "$val"
+    else
+      case "$val" in
+        true|false|null) printf '"%s":%s' "$key" "$val" ;;
+        *) printf '"%s":"%s"' "$key" "$(_json_escape "$val")" ;;
+      esac
+    fi
+  done
+  printf '}'
+}
+
+macadmin_json_pretty_obj_kv() {
+  emulate -L zsh
+  setopt errexit nounset pipefail
+  local first=1 kv key val raw
+  printf '{
+'
+  for kv in "$@"; do
+    key=${kv%%=*}
+    val=${kv#*=}
+    raw=0
+    [[ ${key[-1]} == ':' ]] && { raw=1; key=${key%:}; }
+    if (( first )); then first=0; else printf ',
+'; fi
+    if (( raw )); then
+      printf '  "%s": %s' "$key" "$val"
+    else
+      case "$val" in
+        true|false|null) printf '  "%s": %s' "$key" "$val" ;;
+        *) printf '  "%s": "%s"' "$key" "$(_json_escape "$val")" ;;
+      esac
+    fi
+  done
+  printf '
+}'
+}
