@@ -1,0 +1,11 @@
+#!/usr/bin/env zsh
+# Mock sha256sum: produce a deterministic hash from file size so
+# duplicates can be tested by file size. Avoid `local sz; sz=$(...)`
+# (zsh scope-end echo quirk).
+for f in "$@"; do
+  [[ -f "$f" ]] || continue
+  local sz="$(stat -f %z "$f" 2>/dev/null || echo 0)"
+  # Format: 64 hex chars, but only the size matters for grouping.
+  print -r -- "$(printf '%064x' "$sz")  $f"
+done
+exit 0

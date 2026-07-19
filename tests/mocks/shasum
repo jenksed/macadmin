@@ -1,0 +1,21 @@
+#!/usr/bin/env zsh
+# tests/mocks/shasum — fake shasum using same size-based hash strategy
+# as tests/mocks/sha256sum so duplicates tests work regardless of which
+# hash command the script prefers. Real `shasum -a 256` on the system
+# would compute actual sha256 hashes; for tests we only need determinism
+# + grouping by file size.
+emulate -L zsh
+# Only handle `-a 256`; anything else falls through to the real shasum
+# (which is at a different path the test runner doesn't shadow).
+if [[ "$1" == "-a" && "$2" == "256" ]]; then
+  shift 2
+  for f in "$@"; do
+    [[ -f "$f" ]] || continue
+    local sz="$(stat -f %z "$f" 2>/dev/null || echo 0)"
+    print -r -- "$(printf '%064x' "$sz")  $f"
+  done
+  exit 0
+fi
+# Fall back: print args verbatim so other invocations are visible.
+print -r -- "shasum(mock-fallback): $*"
+exit 0

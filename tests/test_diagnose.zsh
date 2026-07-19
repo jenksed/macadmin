@@ -78,6 +78,11 @@ else
 fi
 
 # 6. cleanup --older-than 7: only old_small.txt (backdated 2025-06-01)
+# Re-touch the fixture's atime BEFORE each older-than test. find -atime
+# checks access time, which the OS bumps on every read — so without this
+# the test becomes flaky after the fixture is touched by any previous
+# read. `touch -t` sets both mtime AND atime.
+touch -t 202506010000 "$FIX/old_small.txt"
 PATH="$HERE/mocks:$PATH" run_cmd R6 -- zsh scripts/diagnose.zsh cleanup --path "$FIX" --older-than 7
 assert_exit0 $R6_STATUS "diagnose: cleanup --older-than 7 exits 0"
 assert_contains "$R6_OUT" "old_small.txt" "diagnose: cleanup --older-than 7 finds old_small.txt"
@@ -100,6 +105,7 @@ else
 fi
 
 # 8. cleanup --older-than 7 --larger-than 1M: zero matches (no file is both old AND large)
+touch -t 202506010000 "$FIX/old_small.txt"
 PATH="$HERE/mocks:$PATH" run_cmd R8 -- zsh scripts/diagnose.zsh cleanup --path "$FIX" --older-than 7 --larger-than 1M
 assert_exit0 $R8_STATUS "diagnose: cleanup combined filters exits 0"
 assert_contains "$R8_OUT" "No files found." "diagnose: combined filters find nothing"
