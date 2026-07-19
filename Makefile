@@ -112,7 +112,7 @@ protect-check:
 	@echo "Verifying MACADMIN_PROTECT gates on mutating commands..."
 	@zsh tests/run.zsh protect 2>/dev/null || { echo "no protect tests yet; see tests/test_protect*.zsh"; exit 0; }
 
-ci: lint test coverage
+ci: lint test coverage protect-check
 	@echo "ci OK"
 
 # ---------------------------------------------------------------------------

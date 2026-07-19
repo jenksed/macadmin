@@ -1,151 +1,203 @@
-# Mac Admin Zsh Scripts
+# macadmin
 
-Zsh-based, POSIX-friendly utilities to manage macOS. Includes a dispatcher, shared helpers, and focused subcommands for system info, updates, cleanup, settings, networking, backups, and hardening.
+A zsh-based toolkit for macOS administration. One dispatcher, focused
+commands, shared libraries, and a safety model that keeps destructive
+actions behind explicit gates.
 
-## Layout
+## Why this exists
 
-```
-bin/macadmin               # dispatcher
-scripts/*.zsh              # commands
-lib/*.zsh                  # shared helpers
-share/*.d/*.zsh            # plugin hook dirs (future)
+`macadmin` merges two predecessor projects into one:
 
-~/.macadminrc              # optional YAML/TOML config
-~/.macadminignore          # cleanup allow/ignore patterns
-```
+- **`jenksed/macadmin`** — the survivor; established the dispatcher + lib
+  convention and the `lib/{common,argparse,exitcodes,log,safety,paths,config,macos,io}.zsh`
+  architecture.
+- **`jenksed/mac-scripts`** — the source of the bulk-rename, sort,
+  archive, media-optimize, venv-finder, and mac-cleanup utilities.
 
-## Quick Start
+The consolidation drops the dangerous `kill-heavy-processes` and
+`disable-startup-items` scripts from mac-scripts, lifts the useful
+file-management and disk-hygiene helpers into the new architecture, and
+documents every command through `--help`, `--dry-run`, `--protect`,
+and JSON output.
 
-- Use the dispatcher (recommended): `zsh bin/macadmin <command> [args]`
-- Or run a script directly: `zsh scripts/system_info.zsh`
+The full audit is in [`reports/architecture.md`](reports/architecture.md)
+and the migration history is in [`docs/migration-history.md`](docs/migration-history.md).
 
-Examples:
+## Install
 
-```
-zsh bin/macadmin help
-zsh bin/macadmin system-info
-zsh bin/macadmin os-update --list
-zsh bin/macadmin cleanup --user --dry-run
-```
-
-## Global Flags (dispatcher)
-
-Human-readable output by default. The dispatcher parses global flags and exports env toggles for subcommands to honor.
-
-- `--dry-run`: Print actions without executing (also sets `DRY_RUN=1`).
-- `--yes`: Assume yes for prompts; allow destructive operations.
-- `--verbose`: Increase verbosity (`MACADMIN_VERBOSE=1`).
-- `--json`: JSON output where supported (`MACADMIN_JSON=1`).
-- `--quiet`: Reduce non-essential output (`MACADMIN_QUIET=1`).
-- `--protect`: Extra safety guard for destructive commands (`MACADMIN_PROTECT=1`).
-
-Environment exported to subcommands:
-
-```
-MACADMIN_DRY_RUN, MACADMIN_YES, MACADMIN_VERBOSE,
-MACADMIN_JSON, MACADMIN_QUIET, MACADMIN_PROTECT
+```sh
+git clone https://github.com/jenksed/macadmin.git
+cd macadmin
+make dev-setup   # installs shellcheck, shfmt, bats-core via brew
+make install     # installs into ~/.macadmin/ and symlinks bin/macadmin
 ```
 
-Unknown commands exit with code `64` and a suggestion.
+`make install` honors `INSTALL_DIR=...` and `BIN_DIR=...` for non-default
+paths. `make uninstall` reverses it cleanly.
 
-## Commands
+## Quick start
 
-Each command supports `--help` via its script. A one‑line summary is shown in `macadmin help`.
-
-- `system-info`: Show OS, hardware, storage, network summary. Supports `--json` (single-line, deterministic order) and `--pretty` (pretty-printed JSON).
-- `os-update`: List/install macOS updates via `softwareupdate`.
-- `cleanup`: Clear caches, rotate logs, run periodic tasks.
-- `settings-ui`: Apply sensible Finder/Dock/Text settings.
-- `network`: Wi‑Fi on/off, list services, flush DNS.
-- `brew-tools`: Check/ensure Homebrew, run `brew bundle`.
-- `backup-tmutil`: Time Machine helpers (status, start, list, thin, exclude).
-- `hardening`: Enable/disable firewall, Gatekeeper; show security status.
-
-Show per-command help:
-
-```
-zsh bin/macadmin <command> --help
+```sh
+macadmin help                # list every command with one-line summary
+macadmin system-info --json  # stable JSON for dashboards / monitoring
+macadmin cleanup --user --dry-run   # preview what would be cleaned
 ```
 
-System info examples:
+Every command supports `--dry-run`, `--json`/`--pretty`, and `--help`.
 
-```
-zsh bin/macadmin system-info                 # key: value lines
-zsh bin/macadmin system-info --json | jq .   # compact JSON
-zsh bin/macadmin system-info --pretty        # pretty JSON
-```
+## Command categories
 
-## Library Helpers
+Each command has a one-line summary visible in `macadmin help` and full
+details in [`docs/commands.md`](docs/commands.md).
 
-These helpers are safe to `source` multiple times and are used by the dispatcher and all commands.
+### System information
 
-- `lib/argparse.zsh`: Parse global flags from `$@`.
-  - Usage within a script:
-    ```
-    source lib/argparse.zsh
-    macadmin_parse_globals "$@"
-    set -- "${MACADMIN_ARGS[@]}"     # remaining args for the command
-    ```
-  - Behavior: sets/exports `MACADMIN_*`; `--quiet` overrides `--verbose`; sets `DRY_RUN=1` when `--dry-run`.
+| Command | What it does |
+|---|---|
+| `system-info` | OS / hardware / disk / network / uptime snapshot. Stable JSON for dashboards. |
+| `os-update` | List + install macOS updates via `softwareupdate`. |
+| `diagnose` | `summary` (read-only snapshot), `cleanup` (file scanner), `freeze` (planning — full execution deferred). |
+| `hardening` | Show firewall / Gatekeeper / SIP / FileVault status. |
 
-- `lib/log.zsh`: Logging helpers.
-  - Human-readable by default; honors `MACADMIN_QUIET`/`MACADMIN_VERBOSE`.
-  - Functions: `log_info`, `log_warn`, `log_error`, `log_debug`, `log_json <event> <payload-json>`, `confirm_or_exit [prompt]`.
-  - JSON mode (`MACADMIN_JSON=1`) emits one line per event with stable keys `ts`, `level`, `cmd`, `message`, `data`.
-    ```
-    MACADMIN_JSON=1 zsh -c 'source lib/log.zsh; log_json update "{\"ok\":true}"'
-    # {"ts":"2025-01-01T00:00:00Z","level":"event","cmd":"zsh","message":"update","data":{"ok":true}}
-    ```
+### Disk + file management
 
-- `lib/exitcodes.zsh`: Exports sysexits-style constants (e.g., `EX_USAGE=64`).
+| Command | What it does |
+|---|---|
+| `cleanup` | Clear user / system caches and logs behind an explicit allowlist. |
+| `disk` | `largest` (top-N dirs by size), `duplicates` (sha256 grouping, `--delete` gated). |
+| `files` | `rename` (bulk prefix/suffix), `sort` (type-bucket), `organize screenshots`. |
+| `venv-finder` | Find Python virtualenvs; validates PEP 405 `pyvenv.cfg` content. |
 
-## Direct Script Execution
+### Network + packages
 
-Commands accept the same global flags when run directly, thanks to `lib/argparse.zsh` being sourced in each script.
+| Command | What it does |
+|---|---|
+| `network` | `services`, `wifi --on/--off`, `dns --flush`, `ping`, `diag --quick`. |
+| `brew-tools` | `check`, `ensure`, `bundle`, `doctor`, `list`. |
+| `backup-tmutil` | Time Machine helpers: `status`, `start`, `list`, `thin`, `exclude`. |
 
-```
-zsh scripts/os_update.zsh --list --quiet
-zsh scripts/cleanup.zsh --user --dry-run --verbose
-MACADMIN_JSON=1 zsh scripts/network.zsh services
-```
+### Archive
 
-## Safety & Conventions
+| Command | What it does |
+|---|---|
+| `archive` | `create` (zip + 7z), `recompress` (zip → 7z). `--delete-sources` is a destructive gate. |
 
-- Shell: `zsh` with `setopt errexit nounset pipefail`.
-- Idempotent where possible; prefer read-only probes before mutations.
-- Destructive actions must be gated by `--yes` and support `--dry-run`.
-- `require_sudo` prompts once when a script needs admin rights.
-- Scripts should avoid Bashisms unless guarded; aim for POSIX-friendly zsh.
+### Settings
 
-JSON logging is intended for machine consumption of logs and events; command core output remains human-readable unless explicitly documented.
+| Command | What it does |
+|---|---|
+| `settings-ui` | Apply sensible Finder / Dock / Text defaults. |
 
-## Developing New Commands
+## Three examples per category
 
-Start from the template for consistent help and flag handling expectations:
+### System information
 
-```
-scripts/_template.zsh
+```sh
+macadmin system-info --json | jq '{product_version, memory_gb, disk_free_gb}'
+macadmin os-update --list
+macadmin diagnose summary --json > /tmp/diag.json
 ```
 
-The dispatcher extracts a one‑line summary from the usage header (`<file> - <summary>`) for `macadmin help`.
+### Disk + file management
 
-## Testing
-
-Lightweight test runner with mocks is included. Run:
-
-```
-make test
+```sh
+macadmin cleanup --user --dry-run
+macadmin disk largest --path ~ --limit 10 --json
+macadmin files sort --path ~/Downloads --dry-run
 ```
 
-Golden checks (manual):
+### Network + packages
 
+```sh
+macadmin network services --json
+macadmin network diag --quick
+macadmin brew-tools list --json
 ```
-zsh bin/macadmin help           # lists commands with summaries
-zsh bin/macadmin does-not-exist || echo $?   # -> 64
-zsh bin/macadmin system-info --help
+
+### Archive
+
+```sh
+macadmin archive create ~/Documents/report.pdf --output ~/Desktop/report.zip
+macadmin archive create ~/Downloads --format 7z --output logs.7z --delete-sources --yes
+macadmin archive recompress ~/Desktop/old.zip --yes
 ```
 
-## Notes
+### Settings
 
-- Some commands require admin rights (e.g., system caches, DNS flush, updates).
-- Homebrew installation requires network access and user confirmation.
+```sh
+macadmin settings-ui --list
+macadmin settings-ui apply --dry-run
+macadmin settings-ui revert
+```
+
+## Architecture (TL;DR)
+
+- `bin/macadmin` is the single dispatcher. It parses global flags, exports
+  `MACADMIN_*` env vars, discovers commands via `scripts/*.zsh`, and
+  exits `EX_USAGE` (64) with a suggestion on unknown input.
+- `lib/*.zsh` are the shared helpers. All are safe to source multiple
+  times. The architecture decision record is in
+  [`reports/architecture.md`](reports/architecture.md).
+- `scripts/*.zsh` are the commands. Each script:
+  1. Sources `lib/{common,argparse,exitcodes,log,safety}.zsh`.
+  2. Calls `macadmin_parse_globals` to honor global flags.
+  3. Honors `--dry-run`, `--yes`, `--protect`, `--json`/`--pretty`.
+- `tests/` contains a tap-style runner (`tests/run.zsh`), per-command
+  tests (`tests/test_<command>.zsh`), and `tests/mocks/` so commands can
+  run under CI without touching the real host.
+- `docs/` is the per-command and per-topics reference (see below).
+- `reports/` holds the architecture decision record, the migration plan,
+  and the retirement plan.
+
+## Safety philosophy
+
+macadmin's default is **read-only**. Every command that can mutate
+exposes three orthogonal gates:
+
+- `--dry-run` — print the plan, do nothing.
+- `--yes` — confirm destructive operations. Without it, the gate refuses.
+- `--protect` — block destructive operations unconditionally, even with `--yes`.
+  Set `MACADMIN_PROTECT=1` (or pass `--protect`) to enable.
+
+`make protect-check` runs the protect-enforcement smoke suite in CI:
+it verifies every command with a destructive path refuses under
+`--protect --yes`. See [`docs/safety.md`](docs/safety.md) for the full
+philosophy and [`tests/test_protect_enforcement.zsh`](tests/test_protect_enforcement.zsh)
+for the gate tests.
+
+## Development quickstart
+
+1. Create `scripts/<your_command>.zsh` from `scripts/_template.zsh`:
+   ```sh
+   make new-command NAME=my-cmd   # scaffolds scripts/my_cmd.zsh
+   ```
+2. Add fixtures to `tests/fixtures/`.
+3. Add mocks (if your command shells out) to `tests/mocks/` and make
+   them executable.
+4. Write `tests/test_my_cmd.zsh` using the `assert.zsh` helpers
+   (`run_cmd`, `assert_exit0`, `assert_contains`).
+5. Run the full suite:
+   ```sh
+   make test           # all tests/test_*.zsh
+   make coverage       # which commands lack tests
+   make protect-check  # MACADMIN_PROTECT gate enforcement
+   make lint           # syntax + shellcheck
+   ```
+
+Full guide in [`docs/development.md`](docs/development.md) and
+[`docs/testing.md`](docs/testing.md).
+
+## Roadmap
+
+- ✅ 0.1 — infrastructure (dispatcher, lib, CI)
+- ✅ 0.2 — shared libraries (paths, safety, io, config, macos)
+- ✅ 0.3 — core commands (JSON, dry-run, --protect gate)
+- ✅ 0.4 — diagnostics (`summary`, `cleanup` scanner, `freeze` planning)
+- ✅ 0.5 — disk + file management (`disk largest/duplicates`, `files rename/sort/organize`)
+- ✅ 0.6 — archive (`archive create/recompress`) + protect-check smoke
+- ✅ 0.7 — venv-finder, network ping, brew polish
+- 🔜 0.8 — documentation + final validation
+- 🔜 Phase 11 — retire `jenksed/mac-scripts`
+
+Full plan in [`reports/migration-plan.md`](reports/migration-plan.md) and
+retirement plan in [`reports/retirement-plan.md`](reports/retirement-plan.md).
