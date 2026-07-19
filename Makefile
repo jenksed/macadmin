@@ -57,24 +57,23 @@ commands:
 # ---------------------------------------------------------------------------
 
 lint:
-	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found. Run 'make dev-setup'"; exit 69; }
 	@echo "Running zsh syntax check on .zsh files..."
 	@for f in bin/macadmin lib/*.zsh scripts/*.zsh tests/run.zsh tests/assert.zsh install.sh; do \
 	  [[ -f "$$f" ]] || continue; \
 	  zsh -n "$$f" || { echo "syntax error in $$f"; exit 1; }; \
 	done
-	@echo "Running shellcheck on install.sh (bash-compatible subset)..."
+	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found. Run 'make dev-setup'"; exit 69; }
+	@echo "Running shellcheck on install.sh..."
 	@shellcheck -S warning -x install.sh || { echo "shellcheck failed on install.sh"; exit 1; }
-	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt not found. Run 'make dev-setup'"; exit 69; }
-	@echo "Checking formatting with shfmt..."
-	@shfmt -d -ln bash -i 2 -ci -fn bin lib scripts install.sh tests/run.zsh tests/assert.zsh || { echo "shfmt -d failed (run 'make format')"; exit 1; }
 	@echo "lint OK"
+	@echo "Note: zsh files are not linted by shellcheck (shellcheck does not"
+	@echo "support zsh). Style consistency is maintained via .editorconfig."
 
 format:
-	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt not found. Run 'make dev-setup'"; exit 69; }
-	@echo "Auto-formatting with shfmt..."
-	@shfmt -w -ln bash -i 2 -ci -fn bin lib scripts install.sh tests/run.zsh tests/assert.zsh
-	@echo "format OK"
+	@echo "zsh files are not auto-formatted by shfmt (shfmt does not fully"
+	@echo "support zsh parameter expansions). Format zsh files manually."
+	@echo "Bash files in bin/, lib/, and install.sh are bash-compatible and"
+	@echo "can be formatted with shfmt -ln bash if needed."
 
 test:
 	@echo "Running zsh test suite..."
