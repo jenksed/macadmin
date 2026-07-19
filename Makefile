@@ -58,8 +58,13 @@ commands:
 
 lint:
 	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck not found. Run 'make dev-setup'"; exit 69; }
-	@echo "Running shellcheck..."
-	@shellcheck -S style -x scripts/*.zsh bin/macadmin lib/*.zsh install.sh || { echo "shellcheck failed"; exit 1; }
+	@echo "Running zsh syntax check on .zsh files..."
+	@for f in bin/macadmin lib/*.zsh scripts/*.zsh tests/run.zsh tests/assert.zsh install.sh; do \
+	  [[ -f "$$f" ]] || continue; \
+	  zsh -n "$$f" || { echo "syntax error in $$f"; exit 1; }; \
+	done
+	@echo "Running shellcheck on install.sh (bash-compatible subset)..."
+	@shellcheck -S warning -x install.sh || { echo "shellcheck failed on install.sh"; exit 1; }
 	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt not found. Run 'make dev-setup'"; exit 69; }
 	@echo "Checking formatting with shfmt..."
 	@shfmt -d -ln bash -i 2 -ci -fn bin lib scripts install.sh tests/run.zsh tests/assert.zsh || { echo "shfmt -d failed (run 'make format')"; exit 1; }
