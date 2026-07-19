@@ -47,17 +47,18 @@ PATH="$HERE/mocks:$PATH" run_cmd R -- zsh scripts/network.zsh services --json
 assert_exit0 $R_STATUS "network: services json exits 0"
 assert_contains "$R_OUT" '"service":"Wi-Fi"' "network: services json contains Wi-Fi"
 assert_contains "$R_OUT" '"enabled":true' "network: services json marks enabled"
-print -r -- "$R_OUT" | python3 - <<'PY'
-import json,sys
-ok=True
-for line in sys.stdin:
-  if not line.strip():
-    continue
-  try:
-    json.loads(line)
-  except Exception as e:
-    print('not ok - services json line not parseable:', line)
-    sys.exit(1)
+# Pass R_OUT via argv so we don't fight zsh's pipe-vs-heredoc precedence.
+python3 - "$R_OUT" <<'PY'
+import json, sys
+ok = True
+for line in sys.argv[1].splitlines():
+    if not line.strip():
+        continue
+    try:
+        json.loads(line)
+    except Exception as e:
+        print('not ok - services json line not parseable:', line)
+        sys.exit(1)
 print('ok - services json lines parse')
 PY
 
