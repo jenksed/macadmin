@@ -105,6 +105,9 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # Locate source directory (this script's directory).
+# Uses zsh's ${(%):-%N} when available (resolves to absolute path of $0);
+# falls back to bash-compatible dirname resolution otherwise.
+# shellcheck disable=SC2296,SC2298
 if [[ -n "${ZSH_VERSION:-}" ]] && [[ -n "${(%):-%N:-}" ]]; then
   SOURCE_DIR="${${(%):-%N}:A:h}"
 else
@@ -155,17 +158,14 @@ readonly INSTALL_DIR
 if [[ "$INSTALL_DIR" == "$SOURCE_DIR" ]]; then
   warn "Source directory equals install directory; copying source into itself is a no-op"
   warn "Proceeding without copying."
-  DID_COPY=0
 elif [[ -d "$INSTALL_DIR" ]]; then
   info "Install directory already exists: $INSTALL_DIR"
   info "Copying current source on top (will not delete existing files)."
-  DID_COPY=1
   cp -R -- "$SOURCE_DIR/." "$INSTALL_DIR/"
 else
   info "Creating install directory: $INSTALL_DIR"
   mkdir -p -- "$INSTALL_DIR"
   cp -R -- "$SOURCE_DIR/." "$INSTALL_DIR/"
-  DID_COPY=1
 fi
 
 # ----- Initialize user config ---------------------------------------------
