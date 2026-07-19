@@ -169,24 +169,33 @@ macadmin_safety_load_ignore() {
 }
 
 # Return 0 if $path matches a loaded ignore pattern, 1 otherwise.
-# Patterns starting with '/' match absolute paths (prefix match).
-# All other patterns match against basename.
-# A leading '~' is expanded to $HOME.
+# Patterns starting with '/' (or after expansion, starting with the
+# absolute HOME) match absolute paths (prefix match). All other
+# patterns match against the basename of the path. A leading '~' is
+# expanded to $HOME.
 macadmin_safety_ignored() {
   local target="$1"
-  [[ ${#_MACADMIN_IGNORE_PATTERNS[@]} -eq 0 ]] && return 1
   local pat
+  local pattmp
+  [[ ${#_MACADMIN_IGNORE_PATTERNS[@]} -eq 0 ]] && return 1
   for pat in "${_MACADMIN_IGNORE_PATTERNS[@]}"; do
-    # Expand leading ~
-    local pattmp="$pat"
+    # Expand leading ~ to $HOME. The '~' must be escaped in the pattern
+    # so zsh does not treat it as a glob-special character.
+    pattmp="$pat"
     case "$pattmp" in
-      ~*) pattmp="${pattmp/#~/$HOME}" ;;
+      "~"*) pattmp="${pattmp/#\~/$HOME}" ;;
     esac
-    # Determine match target.
-    local match_target="$target"
-    [[ "$pattmp" != /* ]] && match_target="${target:t}"
-    # Glob match.
-    [[ "$match_target" == $pattmp ]] && return 0
+    # Absolute patterns match against the full path with prefix semantics.
+    # Non-absolute patterns match against the basename.
+    if [[ "$pattmp" == /* ]]; then
+      # Prefix match: target is under pattmp or equals it.
+      if [[ "$target" == "$pattmp" || "$target" == "$pattmp"/* ]]; then
+        return 0
+      fi
+    else
+      # Basename match: target's basename equals pattmp (with glob).
+      [[ "${target:t}" == $~pattmp ]] && return 0
+    fi
   done
   return 1
 }
