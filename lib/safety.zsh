@@ -25,13 +25,15 @@ typeset -g __MACADMIN_SAFETY_SOURCED=1
 # Declare sysexits codes locally without sourcing exitcodes.zsh, which
 # itself sets errexit/pipefail/nounset. Each constant is defined only
 # if not already present, so callers that loaded exitcodes.zsh first
-# keep their values.
-typeset -gx EX_OK=${EX_OK:-0}
-typeset -gx EX_USAGE=${EX_USAGE:-64}
-typeset -gx EX_DATAERR=${EX_DATAERR:-65}
-typeset -gx EX_NOINPUT=${EX_NOINPUT:-66}
-typeset -gx EX_NOPERM=${EX_NOPERM:-77}
-typeset -gx EX_CONFIG=${EX_CONFIG:-78}
+# keep their values. Use 'typeset +x' first to make the variable
+# writable (in case it was previously declared read-only by
+# exitcodes.zsh).
+[[ -z ${EX_OK+x} ]] && { typeset -gx EX_OK=0; } || true
+[[ -z ${EX_USAGE+x} ]] && { typeset -gx EX_USAGE=64; } || true
+[[ -z ${EX_DATAERR+x} ]] && { typeset -gx EX_DATAERR=65; } || true
+[[ -z ${EX_NOINPUT+x} ]] && { typeset -gx EX_NOINPUT=66; } || true
+[[ -z ${EX_NOPERM+x} ]] && { typeset -gx EX_NOPERM=77; } || true
+[[ -z ${EX_CONFIG+x} ]] && { typeset -gx EX_CONFIG=78; } || true
 
 # ---------------------------------------------------------------------------
 # Path validation
