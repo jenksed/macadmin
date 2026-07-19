@@ -53,12 +53,12 @@ setup() {
 }
 
 @test "macadmin_io_temp_dir: idempotent" {
-  result="$(zsh -c "source '${LIB_DIR}/io.zsh' && d1=\$(macadmin_io_temp_dir) && d2=\$(macadmin_io_temp_dir) && [ \"\$d1\" = \"\$d2\" ] && echo same || echo different")"
+  result="$(zsh -c "source '${LIB_DIR}/io.zsh' && eval \"\$(macadmin_io_temp_dir)\" && d1=\$MACADMIN_TEMP_DIR && eval \"\$(macadmin_io_temp_dir)\" && d2=\$MACADMIN_TEMP_DIR && [ \"\$d1\" = \"\$d2\" ] && echo same || echo different")"
   [ "$result" = "same" ]
 }
 
 @test "macadmin_io_temp_cleanup: clears dir" {
-  result="$(zsh -c "source '${LIB_DIR}/io.zsh' && d=\$(macadmin_io_temp_dir) && macadmin_io_temp_cleanup && [ ! -d \"\$d\" ] && echo cleared || echo still-here")"
+  result="$(zsh -c "source '${LIB_DIR}/io.zsh' && eval \"\$(macadmin_io_temp_dir)\" && d=\$MACADMIN_TEMP_DIR && macadmin_io_temp_cleanup && unset MACADMIN_TEMP_DIR && [ ! -d \"\$d\" ] && echo cleared || echo still-here")"
   [ "$result" = "cleared" ]
 }
 

@@ -34,8 +34,8 @@ macadmin_config_ignore_path() {
 }
 
 # Load ~/.macadminrc (or MACADMIN_CONFIG path) into the current shell.
-# Lines starting with '#' and blank lines are ignored. After this,
-# keys are available as $KEY.
+# Lines starting with '#' and blank lines are ignored. Only UPPER_CASE
+# keys (and MACADMIN_*) are promoted; other keys are ignored.
 #
 # Returns 0 on success (file may not exist; that's fine).
 # Returns non-zero on parse error.
@@ -43,27 +43,28 @@ macadmin_config_load() {
   local cfg
   cfg=$(macadmin_config_path)
   [[ -r "$cfg" ]] || return 0
-  # Source in a subshell so setopts don't leak; then promote values to
-  # the calling environment.
-  local __macadmin_config_load_tmp
-  __macadmin_config_load_tmp=$(
-    set +o errexit
-    source "$cfg"
-    # Print each KEY=value pair, one per line.
-    # We restrict to UPPER_CASE keys to avoid polluting the env with
-    # anything else from the user's file.
-    # shellcheck disable=SC2154
-    print -rl -- ${(k)parameters[(R)([_A-Z]*|MACADMIN*)]} 2>/dev/null \
-      | while IFS= read -r k; do
-          [[ -n "$k" ]] && print -r -- "$k=${(P)k}"
-        done
-  )
-  if [[ -n "$__macadmin_config_load_tmp" ]]; then
-    while IFS= read -r line; do
-      [[ -z "$line" ]] && continue
-      eval "export $line" 2>/dev/null || true
-    done <<<"$__macadmin_config_load_tmp"
-  fi
+  # Parse the config line-by-line. Do NOT source the file — that
+  # would expose lowercase keys and possibly run arbitrary commands.
+  local line key val
+  while IFS= read -r line; do
+    # Skip blanks and comments.
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    # Must be KEY=value.
+    [[ "$line" == *=* ]] || continue
+    key=${line%%=*}
+    val=${line#*=}
+    # Strip surrounding quotes from val if present.
+    case "$val" in
+      \"*\") val=${val#\"}; val=${val%\"} ;;
+      \'*\') val=${val#\'}; val=${val%\'} ;;
+    esac
+    # Restrict to UPPER_CASE keys (incl. MACADMIN_).
+    [[ "$key" == ([A-Z_][A-Z0-9_]*|MACADMIN_*) ]] || continue
+    # Reject keys with unsafe characters.
+    [[ "$key" == *[!A-Z0-9_]* ]] && continue
+    # Promote to env. eval handles special characters in val.
+    eval "export ${key}=${(q)val}" 2>/dev/null || true
+  done < "$cfg"
   return ${EX_OK:-0}
 }
 

@@ -40,6 +40,16 @@ typeset -gx EX_CONFIG=${EX_CONFIG:-78}
 # macOS system paths that macadmin should never delete from.
 # Use literal prefix matches; do NOT use globs (zsh would expand them
 # at typeset time, producing hundreds of entries).
+#
+# Notes:
+#   - /private is NOT listed: /private/var/folders/... is per-user temp,
+#     which is user-writable and macadmin may legitimately delete from.
+#   - /var is NOT listed: same reason (/var/folders is per-user temp).
+#     /var/log and /var/audit must be guarded separately by callers.
+#   - /tmp is NOT listed: BSD-style shared temp; user-writable.
+#
+# This list is the FIRST line of defense. macadmin's safety model also
+# requires explicit allowlists for mutating commands.
 typeset -ga MACADMIN_SYSTEM_PATHS=(
   /
   /System
@@ -47,9 +57,9 @@ typeset -ga MACADMIN_SYSTEM_PATHS=(
   /bin
   /sbin
   /etc
-  /var
-  /private
-  /private/var
+  /private/etc
+  /private/var/log
+  /private/var/audit
 )
 
 # Return 0 if $1 is a "safe" path (not a system path), 1 otherwise.

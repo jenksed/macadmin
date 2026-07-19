@@ -28,23 +28,28 @@ setup() {
   [ "$result" = "no" ]
 }
 
-@test "macadmin_safety_path_is_safe: /var is unsafe" {
-  result="$(zsh -c "source '${LIB_DIR}/safety.zsh' && macadmin_safety_path_is_safe /var && echo yes || echo no")"
-  [ "$result" = "no" ]
-}
-
 @test "macadmin_safety_path_is_safe: /var/log is unsafe" {
   result="$(zsh -c "source '${LIB_DIR}/safety.zsh' && macadmin_safety_path_is_safe /var/log && echo yes || echo no")"
   [ "$result" = "no" ]
 }
 
-@test "macadmin_safety_path_is_safe: /private is unsafe" {
-  result="$(zsh -c "source '${LIB_DIR}/safety.zsh' && macadmin_safety_path_is_safe /private && echo yes || echo no")"
-  [ "$result" = "no" ]
+@test "macadmin_safety_path_is_safe: /var/folders is safe (per-user temp)" {
+  result="$(zsh -c "source '${LIB_DIR}/safety.zsh' && macadmin_safety_path_is_safe /var/folders/foo && echo yes || echo no")"
+  [ "$result" = "yes" ]
 }
 
 @test "macadmin_safety_path_is_safe: /private/etc is unsafe" {
   result="$(zsh -c "source '${LIB_DIR}/safety.zsh' && macadmin_safety_path_is_safe /private/etc && echo yes || echo no")"
+  [ "$result" = "no" ]
+}
+
+@test "macadmin_safety_path_is_safe: /private/var/folders is safe (per-user temp)" {
+  result="$(zsh -c "source '${LIB_DIR}/safety.zsh' && macadmin_safety_path_is_safe /private/var/folders/foo && echo yes || echo no")"
+  [ "$result" = "yes" ]
+}
+
+@test "macadmin_safety_path_is_safe: /private/var/log is unsafe" {
+  result="$(zsh -c "source '${LIB_DIR}/safety.zsh' && macadmin_safety_path_is_safe /private/var/log && echo yes || echo no")"
   [ "$result" = "no" ]
 }
 

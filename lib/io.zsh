@@ -94,19 +94,28 @@ macadmin_io_backup_file() {
 # Per-script temp directory. Set on first call; cleaned on EXIT.
 typeset -g MACADMIN_TEMP_DIR=""
 
-# Print the temp directory path, creating it if needed.
+# Print the temp directory path as a settable form.
 # Idempotent: subsequent calls return the same path.
+# Use as: eval "$(macadmin_io_temp_dir)"
+#   or:   MACADMIN_TEMP_DIR=$(macadmin_io_temp_dir)
+#         # When used with $(), MACADMIN_TEMP_DIR is set in the parent
+#         # because we emit an assignment form.
 macadmin_io_temp_dir() {
-  if [[ -z "$MACADMIN_TEMP_DIR" ]]; then
-    MACADMIN_TEMP_DIR=$(mktemp -d -t macadmin.XXXXXX 2>/dev/null) || {
-      print -r -- "[ERROR] failed to create temp dir" >&2
-      return 1
-    }
-    # Auto-cleanup on EXIT.
-    # shellcheck disable=SC2154
-    trap '[[ -n "$MACADMIN_TEMP_DIR" && -d "$MACADMIN_TEMP_DIR" ]] && rm -rf -- "$MACADMIN_TEMP_DIR"' EXIT
+  # If we already have a temp dir, emit it as an assignment.
+  if [[ -n "$MACADMIN_TEMP_DIR" && -d "$MACADMIN_TEMP_DIR" ]]; then
+    print -r -- "MACADMIN_TEMP_DIR='$MACADMIN_TEMP_DIR'"
+    return 0
   fi
-  print -r -- "$MACADMIN_TEMP_DIR"
+  # Create a new one.
+  local tmp
+  tmp=$(mktemp -d -t macadmin.XXXXXX 2>/dev/null) || {
+    print -r -- "[ERROR] failed to create temp dir" >&2
+    return 1
+  }
+  # Auto-cleanup on EXIT.
+  trap '[[ -n "$MACADMIN_TEMP_DIR" && -d "$MACADMIN_TEMP_DIR" ]] && rm -rf -- "$MACADMIN_TEMP_DIR"' EXIT
+  # Emit as an assignment so callers can capture with eval or $().
+  print -r -- "MACADMIN_TEMP_DIR='$tmp'"
 }
 
 # Explicit cleanup. Idempotent.
