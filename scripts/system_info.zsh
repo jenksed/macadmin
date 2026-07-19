@@ -73,9 +73,16 @@ _get_mem_gb()
 _get_hw()
 {
   # Extract model identifier and chip if available
+  # macOS BWK awk does NOT honor multi-char -F separators (treats -F': '
+  # as -F':'); use single-char FS and trim leading whitespace from $2.
   local sp
   sp=$(system_profiler SPHardwareDataType 2>/dev/null || true)
-  print -r -- "$sp" | awk -F': ' '/Model Identifier/{m=$2} /Chip:/{c=$2} /Processor Name:/{c=$2} END{print m "\n" c}'
+  print -r -- "$sp" | awk -F':' '
+    /Model Identifier/  { gsub(/^[[:space:]]+/, "", $2); m=$2 }
+    /Chip:/             { gsub(/^[[:space:]]+/, "", $2); c=$2 }
+    /Processor Name/    { if (c == "") { gsub(/^[[:space:]]+/, "", $2); c=$2 } }
+    END                 { print m "\n" c }
+  '
 }
 
 _primary_volume()
@@ -125,7 +132,15 @@ _interfaces_json_fragment()
 _uptime_seconds()
 {
   local sec now
-  sec=$(sysctl -n kern.boottime 2>/dev/null | awk -F'[ =,]' '{for(i=1;i<=NF;i++)if($i=="sec"){print $(i+2);exit}}' || echo 0)
+  # sysctl -n kern.boottime on macOS prints e.g.
+  #   "{ sec = 1700000000, usec = 0 }"
+  # Split on whitespace + comma; the number after the "sec" token is the
+  # boot epoch. $(i+1) is the value; $(i+2) was wrong (off-by-one —
+  # landed on "usec").
+  sec=$(sysctl -n kern.boottime 2>/dev/null | awk -F'[ =,]+' '
+    { for (i=1;i<=NF;i++) if ($i == "sec") { print $(i+1); exit } }
+  ')
+  : "${sec:=0}"
   now=$(date +%s)
   if [[ -n "$sec" && "$sec" != 0 ]]; then
     echo $((now - sec))

@@ -1,5 +1,16 @@
 #!/usr/bin/env zsh
 emulate -L zsh
-echo "Hardware:\n\n  Hardware Overview:\n\n    Model Name: Mock"
+cat <<'EOF'
+Hardware:
+
+    Hardware Overview:
+
+      Model Name: MacBook Air
+      Model Identifier: Mac14,2
+      Chip: Apple M2
+      Processor Name: arm64
+      Memory: 16 GB
+      System Version: macOS 15.6.1 (24G90)
+EOF
 exit 0
 

@@ -1,6 +1,9 @@
 #!/usr/bin/env zsh
 emulate -L zsh
-echo "Filesystem  Size Used Avail Capacity iused ifree %iused  Mounted on"
-echo "/dev/disk1 100G  10G  90G    10%       1     1     1%   /"
+# Match macOS `df -k` output shape: header followed by data row with
+# 1024-byte block counts. Values sized to round to "100 GB total / 10 GB used".
+# 100 GB  = 104857600 KB; 10 GB = 10485760 KB; 90 GB = 94371840 KB.
+print -r -- "Filesystem     1024-blocks     Used Available Capacity iused      ifree %iused  Mounted on"
+print -r -- "/dev/disk1s5  104857600 10485760 94371840    10%   100000 1000000000    0%   /"
 exit 0
 

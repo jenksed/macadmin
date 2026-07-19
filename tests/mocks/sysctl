@@ -1,9 +1,29 @@
 #!/usr/bin/env zsh
 emulate -L zsh
-if [[ "$1" == "hw.memsize" ]]; then
-  echo "hw.memsize: 8589934592"
-else
-  echo "sysctl(mock): $*"
-fi
+# Mock sysctl: honors `-n <key>` (numeric-only) and `<key>` (key: value).
+# Other invocations echo the args so failures are visible in tests.
+case "$1" in
+  -n)
+    case "$2" in
+      hw.memsize) print -r -- "8589934592" ;;       # 8 GB
+      kern.boottime)
+        # Boot time as Unix epoch: 60 seconds ago (mock-friendly).
+        local now=$(( $(date +%s) - 60 ))
+        print -r -- "{ sec = $now, usec = 0 }"
+        ;;
+      *) print -r -- "0" ;;
+    esac
+    ;;
+  hw.memsize)
+    print -r -- "hw.memsize: 8589934592"
+    ;;
+  kern.boottime)
+    local now=$(( $(date +%s) - 60 ))
+    print -r -- "kern.boottime: { sec = $now, usec = 0 }"
+    ;;
+  *)
+    print -r -- "sysctl(mock): $*"
+    ;;
+esac
 exit 0
 
