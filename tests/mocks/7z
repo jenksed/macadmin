@@ -1,0 +1,30 @@
+#!/usr/bin/env zsh
+# tests/mocks/7z — fake 7z binary. macOS doesn't ship 7z by default
+# (requires `brew install p7zip`), so tests must work without it.
+#
+# Records args + creates a placeholder archive file at the second
+# positional arg (the archive path). For tests/test_archive.zsh we
+# only need to verify (a) the script called 7z with the right args,
+# (b) the archive path got created. We don't need a valid 7z format
+# since archive.zsh itself doesn't unpack or verify the archive.
+emulate -L zsh
+
+# Record args for test assertions.
+local args_log="/tmp/.macadmin_7z_args_$$_$RANDOM"
+print -r -- "$@" > "$args_log"
+
+# 7z invocation: `7z a <archive> <files...>` — second arg is the archive.
+if [[ "$1" == "a" ]]; then
+  local archive="$2"
+  shift 2
+  if [[ -n "$archive" ]]; then
+    # Write a placeholder. Header lists the inputs so test_archive.zsh
+    # can grep for them if needed.
+    {
+      print -r -- "7z-mock-archive"
+      for f in "$@"; do
+        print -r -- "input: $f"
+      done
+    } > "$archive"
+  fi
+fi

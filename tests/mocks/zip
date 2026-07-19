@@ -1,0 +1,17 @@
+#!/usr/bin/env zsh
+# tests/mocks/zip — forwards to the real /usr/bin/zip on macOS while
+# also recording the args so tests can assert on them.
+#
+# Why not a fully-synthetic mock: tests/test_archive.zsh needs to verify
+# the archive IS a real zip (unzip -l succeeds). A pure stub can't do
+# that. Forwarding keeps the output valid AND gives tests an arg log.
+emulate -L zsh
+
+# Record the full arg list so tests can assert on what was passed.
+# Use combined declare+assign to avoid the zsh scope-end echo quirk
+# (local foo; foo=value leaks 'foo=value' to stdout).
+local args_log="/tmp/.macadmin_zip_args_$$_$RANDOM"
+print -r -- "$@" > "$args_log"
+
+# Forward to the real zip binary so the output is a valid zip file.
+exec /usr/bin/zip "$@"
