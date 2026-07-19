@@ -47,19 +47,24 @@ PATH="$HERE/mocks:$PATH" run_cmd R -- zsh scripts/network.zsh services --json
 assert_exit0 $R_STATUS "network: services json exits 0"
 assert_contains "$R_OUT" '"service":"Wi-Fi"' "network: services json contains Wi-Fi"
 assert_contains "$R_OUT" '"enabled":true' "network: services json marks enabled"
-# Pass R_OUT via argv so we don't fight zsh's pipe-vs-heredoc precedence.
+# R_OUT may be a single multi-line JSON document or a sequence of
+# JSON objects separated by newlines. Concatenate any fragments and
+# validate that the whole is parseable JSON.
 python3 - "$R_OUT" <<'PY'
 import json, sys
-ok = True
-for line in sys.argv[1].splitlines():
-    if not line.strip():
-        continue
-    try:
-        json.loads(line)
-    except Exception as e:
-        print('not ok - services json line not parseable:', line)
-        sys.exit(1)
-print('ok - services json lines parse')
+raw = sys.argv[1]
+try:
+    parsed = json.loads(raw)
+except Exception:
+    # Try line-delimited: each non-empty line is a JSON document.
+    parsed = []
+    for line in raw.splitlines():
+        if line.strip():
+            parsed.append(json.loads(line))
+if not isinstance(parsed, (list, dict)):
+    print('not ok - services json: not a document or list')
+    sys.exit(1)
+print('ok - services json parses')
 PY
 
 # dns: JSON output (dry-run)
@@ -113,12 +118,12 @@ assert_exit0 $R_STATUS "network: wifi override dry-run exits 0"
 assert_contains "$R_OUT" "networksetup -setairportpower en0 off" "network: wifi override uses en0 and off"
 # pretty JSON parse checks
 PATH="$HERE/mocks:$PATH" run_cmd R -- zsh scripts/network.zsh diag --quick --json --pretty
-print -r -- "$R_OUT" | python3 - <<'PY'
-import json,sys
+python3 - "$R_OUT" <<'PY'
+import json, sys
 try:
-  json.loads(sys.stdin.read())
-  print('ok - diag pretty json parse')
-except Exception as e:
-  print('not ok - diag pretty json parse failed')
-  sys.exit(1)
+    json.loads(sys.argv[1])
+    print('ok - diag pretty json parse')
+except Exception:
+    print('not ok - diag pretty json parse failed')
+    sys.exit(1)
 PY
