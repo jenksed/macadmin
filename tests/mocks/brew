@@ -1,13 +1,41 @@
 #!/usr/bin/env zsh
 emulate -L zsh
-if [[ "$1" == "--version" ]]; then
-  echo "Homebrew 4.3.0"
-  exit 0
-fi
-if [[ "$1" == "bundle" ]]; then
-  echo "brew bundle (mock)"
-  exit 0
-fi
-echo "brew(mock): $*"
+# Fake Homebrew for tests. Recognizes a small set of subcommands
+# used by scripts/brew_tools.zsh and scripts/network.zsh (via
+# tests/mocks path-shadowing). Anything else echoes the args.
+
+case "$1" in
+  --version)
+    print -r -- "Homebrew 4.3.0"
+    exit 0
+    ;;
+  bundle)
+    print -r -- "brew bundle (mock)"
+    exit 0
+    ;;
+  doctor)
+    print -r -- "Your system is ready to brew."
+    exit 0
+    ;;
+  list)
+    # When called as `brew list --formula --versions`, emit one
+    # formula-per-line in `name version` shape. Default to a small
+    # canned list so tests have something to parse.
+    shift
+    if [[ "$*" == *"--formula"* && "$*" == *"--versions"* ]]; then
+      print -r -- "git 2.43.0"
+      print -r -- "jq 1.7.1"
+      print -r -- "shellcheck 0.10.0"
+      print -r -- "shfmt 3.10.0"
+      exit 0
+    fi
+    print -r -- "git"
+    print -r -- "jq"
+    print -r -- "shellcheck"
+    print -r -- "shfmt"
+    exit 0
+    ;;
+esac
+print -r -- "brew(mock): $*"
 exit 0
 

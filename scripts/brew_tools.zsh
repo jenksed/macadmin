@@ -21,12 +21,16 @@ Usage:
   brew_tools.zsh bundle --generate
   brew_tools.zsh bundle --diff
   brew_tools.zsh bundle --apply [--dry-run]
+  brew_tools.zsh doctor [--json]
+  brew_tools.zsh list [--json]
 
 Notes:
   - ensure: detects Homebrew; installs only with --yes. Prints next steps.
   - bundle --generate: create Brewfile in CWD (overwrites).
   - bundle --diff: show changes vs current system (missing/removals).
   - bundle --apply: apply Brewfile (respects --dry-run; prints plan).
+  - doctor: runs `brew doctor`; captures first 50 lines + exit code.
+  - list: runs `brew list --formula --versions`; one object per formula.
   - Apple Silicon vs Intel handled by brew path (/opt/homebrew vs /usr/local).
 EOF
 }
@@ -201,6 +205,87 @@ case "$cmd" in
         fi
         ;;
     esac
+    ;;
+
+  doctor)
+    require_cmd brew || {
+      log_error "brew not available"
+      exit ${EX_UNAVAILABLE:-69}
+    }
+    # Capture brew doctor output. Truncate to first 50 lines so JSON
+    # blobs stay bounded; full output goes to stderr in --dry-run.
+    local doc_out=""
+    local doc_rc=0
+    doc_out=$(brew doctor 2>&1 | head -50)
+    doc_rc=$?  # capture BEFORE any errexit-disabled assignment leak risk
+    local ok=false
+    (( doc_rc == 0 )) && ok=true
+
+    if ((MACADMIN_JSON)); then
+      local kv
+      kv=(
+        event="brew_doctor"
+        ok="$ok"
+        exit_code="$doc_rc"
+        output="$doc_out"
+      )
+      if (( opt_pretty )); then
+        macadmin_json_pretty_obj "$kv[@]"
+        printf '\n'
+      else
+        macadmin_json_obj "$kv[@]"
+        printf '\n'
+      fi
+    else
+      log_info "brew doctor: exit=$doc_rc"
+      if [[ -n "$doc_out" ]]; then
+        print -r -- "$doc_out"
+      fi
+    fi
+    # Exit with brew doctor's own exit code so callers can branch on it.
+    exit "$doc_rc"
+    ;;
+
+  list)
+    require_cmd brew || {
+      log_error "brew not available"
+      exit ${EX_UNAVAILABLE:-69}
+    }
+    # `brew list --formula --versions` emits "name version" per line.
+    # Filter to formulae that look like name-version (skip the empty
+    # pinned/cask variants which can have different shapes).
+    local raw
+    raw="$(brew list --formula --versions 2>/dev/null)"
+    if ((MACADMIN_JSON)); then
+      if (( opt_pretty )); then
+        printf '[\n'
+        local first=1
+        local line name ver
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          # Last whitespace-separated token is the version, everything
+          # before is the name (handles names with spaces, though rare).
+          ver="${line##* }"
+          name="${line% *}"
+          if (( first )); then first=0; else printf ',\n'; fi
+          printf '  '
+          macadmin_json_pretty_obj formula="$name" version="$ver"
+        done <<<"$raw"
+        printf '\n]\n'
+      else
+        local line name ver
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          ver="${line##* }"
+          name="${line% *}"
+          macadmin_json_obj formula="$name" version="$ver"
+          printf '\n'
+        done <<<"$raw"
+      fi
+    else
+      print -r -- "$raw"
+    fi
+    exit 0
     ;;
 
   *)

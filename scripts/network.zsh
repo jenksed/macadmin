@@ -19,6 +19,7 @@ Usage:
   network.zsh services [--list]
   network.zsh wifi --on|--off
   network.zsh dns --flush
+  network.zsh ping <host>... [--count N] [--timeout sec]
   network.zsh diag --quick
   # Add --json for machine output; add --pretty to pretty-print JSON.
 
@@ -34,6 +35,7 @@ Notes:
       YAML: network: { wifi_default_service: "My Wi‑Fi" }
       TOML: [network]\n            wifi_default_service = "My Wi‑Fi"
   - DNS flush tries modern and legacy variants.
+  - ping: macOS BSD ping. --count N -> -c N; --timeout SEC -> -W (N*1000) ms.
   - diag --quick performs gateway ping, DNS A/AAAA, and captive portal probe.
 EOF
 }
@@ -156,6 +158,99 @@ _ns_device_for_service()
     dev=$(networksetup -listallhardwareports 2>/dev/null | awk '/Wi-Fi|AirPort/{f=1} f&&/Device:/{print $2; exit}')
   fi
   print -r -- "$dev"
+}
+
+# Ping one host, parse BSD ping stats, emit JSON or human output.
+# Echoes nothing on stdout besides the formatted output (no scope leaks).
+# Args: <host> <count> [<ping_arg>...]
+# Returns: 0 if reachable, 1 otherwise (BSD ping semantics).
+#
+# NOTE: function scope is essential. The same `local x; x=$(...)` pattern
+# inside a `for` loop body would leak `x=value` at scope-end (zsh quirk).
+_network_ping_one()
+{
+  emulate -L zsh
+  set +o errexit  # ping may legitimately exit non-zero
+  local host="$1"; shift
+  local count="$1"; shift
+  local pout rc
+  pout="$(ping "$@" "$host" 2>/dev/null)"
+  rc=$?
+  # BSD ping stats line:  "1 packets transmitted, 1 packets received, 0.0% packet loss"
+  # Tokenize by whitespace. Find "packets" followed by "transmitted," or
+  # "received,"; the field BEFORE "packets" is the count.
+  local tx rx loss
+  tx="$(print -r -- "$pout" | awk '
+    /packets transmitted/ {
+      for (i=1;i<=NF;i++) if ($i=="packets" && $(i+1)=="transmitted,") {
+        print $(i-1); exit
+      }
+    }')"
+  rx="$(print -r -- "$pout" | awk '
+    /packets received/ {
+      for (i=1;i<=NF;i++) if ($i=="packets" && $(i+1)=="received,") {
+        print $(i-1); exit
+      }
+    }')"
+  loss="$(print -r -- "$pout" | awk '
+    /packet loss/ {
+      for (i=1;i<=NF;i++) if ($i=="packet" && $(i+1)=="loss") {
+        v=$(i-1); gsub(/%/,"",v); print v; exit
+      }
+    }')"
+  # Round-trip line:  "round-trip min/avg/max/stddev = 0.123/0.123/0.123/0.000 ms"
+  # Split on `=` AND `/`. After "round-trip min/avg/max/stddev " comes the
+  # `=` then space then the 4 numbers. They land at $5..$8 ($5 has a
+  # leading space because of the `=` followed by whitespace).
+  local stats
+  stats="$(print -r -- "$pout" | awk -F'[=/]' '
+    /min\/avg\/max/ {
+      gsub(/^[ \t]+/, "", $5)
+      gsub(/[ \t]+ms$/, "", $8)
+      print $5"/"$6"/"$7"/"$8; exit
+    }')"
+  local min avg max mdev
+  if [[ -n "$stats" ]]; then
+    IFS='/' read -r min avg max mdev <<<"$stats"
+  fi
+  # Defaults for missing fields (unreachable host emits only failure lines).
+  : "${tx:=0}" "${rx:=0}" "${loss:=100}" "${min:=}" "${avg:=}" "${max:=}" "${mdev:=}"
+
+  local ok=false
+  (( rc == 0 )) && ok=true
+
+  if ((MACADMIN_JSON)); then
+    local kv
+    kv=(
+      host="$host"
+      transmitted="$tx"
+      received="$rx"
+      packet_loss="$loss"
+      min_ms="$min"
+      avg_ms="$avg"
+      max_ms="$max"
+      ok="$ok"
+    )
+    if ((opt_pretty)); then
+      macadmin_json_pretty_obj "$kv[@]"
+      printf '\n'
+    else
+      macadmin_json_obj "$kv[@]"
+      printf '\n'
+    fi
+  else
+    local packet_word="packet"
+    (( count != 1 )) && packet_word="packets"
+    log_info "Pinging $host (${count} $packet_word)..."
+    [[ -n "$pout" ]] && print -r -- "$pout"
+    if (( rc == 0 )); then
+      log_info "$host: $rx/$tx received (${loss}% loss) min/avg/max = ${min}/${avg}/${max} ms"
+    else
+      log_warn "$host: unreachable (rc=$rc)"
+    fi
+  fi
+
+  return $rc
 }
 
 # --- JSON helpers (from lib/log.zsh) ---
@@ -301,6 +396,60 @@ case "$subcmd" in
         exit ${EX_USAGE:-64}
         ;;
     esac
+    ;;
+
+  ping)
+    shift
+    typeset -a hosts=()
+    typeset -i opt_count=1
+    typeset -i opt_timeout_ms=0
+    while (( $# > 0 )); do
+      case "$1" in
+        -c|--count)
+          (( $# >= 2 )) || { log_error "ping: --count requires a value"; exit ${EX_USAGE:-64}; }
+          opt_count=$2; shift 2 ;;
+        -W|--timeout)
+          (( $# >= 2 )) || { log_error "ping: --timeout requires a value"; exit ${EX_USAGE:-64}; }
+          # Accept seconds (per docs); pass to BSD ping -W as ms.
+          opt_timeout_ms=$(( $2 * 1000 )); shift 2 ;;
+        -h|--help)
+          usage; exit 0 ;;
+        --json|--pretty|--quiet|--verbose|--dry-run|--yes) shift ;;
+        --) shift; hosts+=("$@"); break ;;
+        -*)
+          log_error "ping: unknown flag: $1"
+          exit ${EX_USAGE:-64} ;;
+        *)
+          hosts+=("$1"); shift ;;
+      esac
+    done
+    if (( ${#hosts[@]} == 0 )); then
+      log_error "ping: at least one host required"
+      exit ${EX_USAGE:-64}
+    fi
+    if (( opt_count < 1 )); then
+      log_error "ping: --count must be >= 1"
+      exit ${EX_USAGE:-64}
+    fi
+
+    # Build the ping arg list once. -W is omitted when timeout is 0 so we
+    # do not surprise BSD ping with a zero wait.
+    typeset -a ping_args=(-c "$opt_count")
+    if (( opt_timeout_ms > 0 )); then
+      ping_args+=(-W "$opt_timeout_ms")
+    fi
+
+    typeset -i any_fail=0
+    for host in "${hosts[@]}"; do
+      _network_ping_one "$host" "$opt_count" "${ping_args[@]}"
+      (( $? != 0 )) && any_fail=1
+    done
+
+    # Exit non-zero if any host failed (matches BSD ping semantics:
+    # rc=1 means some packets lost; rc=2 means fatal error).
+    if (( any_fail )); then
+      exit ${EX_TEMPFAIL:-75}
+    fi
     ;;
 
   diag)

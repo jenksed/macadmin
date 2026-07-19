@@ -1,4 +1,40 @@
 #!/usr/bin/env zsh
+# tests/mocks/ping — fake ping emitting BSD-ping-format output.
+#
+# Honors -c <count> so the JSON parser in scripts/network.zsh can
+# exercise the multi-packet path. Always succeeds (rc=0). Use a
+# separate mock or wrapper for unreachable-host tests.
+
 emulate -L zsh
-# Pretend a single ping succeeds quickly
+
+count=1
+host=""
+args=("$@")
+while (( $# > 0 )); do
+  case "$1" in
+    -c) count=$2; shift 2 ;;
+    -W) shift 2 ;;
+    -n|-q|-v) shift ;;
+    -*) shift ;;
+    *)  host=$1; shift ;;
+  esac
+done
+
+# Display host fallback so output is well-formed.
+: "${host:=unknown}"
+
+# BSD ping header + per-packet lines.
+print -r -- "PING $host (127.0.0.1): 56 data bytes"
+typeset -i i=0
+while (( i < count )); do
+  print -r -- "64 bytes from 127.0.0.1: icmp_seq=$i ttl=64 time=0.123 ms"
+  (( i++ ))
+done
+
+# BSD ping statistics footer.
+print -r -- ""
+print -r -- "--- $host ping statistics ---"
+print -r -- "$count packets transmitted, $count packets received, 0.0% packet loss"
+print -r -- "round-trip min/avg/max/stddev = 0.123/0.123/0.123/0.000 ms"
+
 exit 0
