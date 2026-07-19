@@ -72,8 +72,9 @@ jobs:
           cmds=$(zsh bin/macadmin help 2>&1 | awk '/^Commands:/ {flag=1; next} flag && /^Examples:/ {flag=0} flag && /^  [a-z]/ {print $1}')
           missing=0
           echo "Discovered commands:"
-          for c in $cmds; do echo "  $c"; done
-          for c in $cmds; do
+          while IFS= read -r c; do
+            [[ -z "$c" ]] && continue
+            echo "  $c"
             out=$(zsh bin/macadmin "$c" --help 2>&1)
             code=$?
             if [[ $code -ne 0 ]] || [[ -z "$out" ]]; then
@@ -82,7 +83,7 @@ jobs:
             else
               echo "OK: $c --help"
             fi
-          done
+          done <<<"$cmds"
           if [[ $missing -gt 0 ]]; then
             echo "$missing commands lack --help"
             exit 1
