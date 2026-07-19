@@ -233,8 +233,7 @@ macadmin_json_pretty_obj_kv() {
 # Pretty-print a JSON array from a list of JSON objects
 # Usage:
 #   macadmin_json_pretty_array '{"a":1}' '{"b":2}'
-#   printf '%s
-' '{"a":1}' '{"b":2}' | macadmin_json_pretty_array
+#   printf "%s\n" '{"a":1}' '{"b":2}' | macadmin_json_pretty_array
 macadmin_json_pretty_array() {
   emulate -L zsh
   setopt errexit nounset pipefail

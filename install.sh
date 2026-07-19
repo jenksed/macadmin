@@ -207,6 +207,7 @@ if (( DO_RC )); then
     {
       print -r -- ""
       print -r -- "$PATH_MARKER"
+      # shellcheck disable=SC2016
       print -r -- 'export PATH="$HOME/bin:$PATH"'
     } >> "$RC_FILE"
     ok "Added PATH to $RC_FILE"
