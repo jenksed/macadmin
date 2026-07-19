@@ -50,7 +50,7 @@ list:
 	@ls -1 scripts | sed 's/^/ - /'
 
 commands:
-	@zsh bin/macadmin help 2>&1 | awk '/^Commands:/ {flag=1; next} flag && /^  [a-z][a-z0-9-]* / {print " - "$$1}'
+	@zsh bin/macadmin help 2>&1 | awk '/^Commands:/ {flag=1; next} flag && /^Examples:/ {flag=0} flag && /^  [a-z][a-z0-9-]*[ \t]+/ {print " - "$$1}'
 
 # ---------------------------------------------------------------------------
 # Quality
