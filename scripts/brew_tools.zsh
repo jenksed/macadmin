@@ -42,23 +42,6 @@ _brew_prefix_guess()
   if [[ "$m" == arm64* ]]; then echo "/opt/homebrew"; else echo "/usr/local"; fi
 }
 
-_brew_info_json()
-{
-  local found=0 path="" ver=""
-  if command -v brew >/dev/null 2>&1; then
-    found=1
-    path=$(command -v brew)
-    ver=$(brew --version 2>/dev/null | head -1)
-  fi
-  if ((opt_pretty)); then
-    macadmin_json_pretty_obj found=$([[ $found -eq 1 ]] && echo true || echo false) path="$path" version="$ver" arch="$(_arch)" prefix_guess="$(_brew_prefix_guess)"
-  else
-    macadmin_json_obj found=$([[ $found -eq 1 ]] && echo true || echo false) path="$path" version="$ver" arch="$(_brew_prefix_guess)"
-  fi
-  printf '
-'
-}
-
 typeset -i opt_pretty=0
 for a in "$@"; do
   [[ "$a" == "--pretty" ]] && opt_pretty=1
