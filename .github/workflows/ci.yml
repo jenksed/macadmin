@@ -68,8 +68,11 @@ jobs:
         run: zsh bin/macadmin help
       - name: every command has --help
         run: |
-          cmds=$(zsh bin/macadmin help 2>&1 | awk '/^  [a-z]/ {print $1}')
+          # Extract only lines from the Commands: section (after "Commands:" header).
+          cmds=$(zsh bin/macadmin help 2>&1 | awk '/^Commands:/ {flag=1; next} flag && /^  [a-z]/ {print $1}')
           missing=0
+          echo "Discovered commands:"
+          for c in $cmds; do echo "  $c"; done
           for c in $cmds; do
             out=$(zsh bin/macadmin "$c" --help 2>&1)
             code=$?
