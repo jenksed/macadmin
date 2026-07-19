@@ -1,0 +1,34 @@
+# ~/.macadminignore — patterns for paths that cleanup, organize, and
+# venv-finder should skip. One pattern per line. Lines beginning with '#' are
+# comments. Blank lines are ignored.
+#
+# Matching rules:
+#   - Patterns beginning with '/' match absolute paths (prefix match).
+#   - All other patterns match against the basename of the path.
+#   - A leading '~' is expanded to $HOME.
+#   - Simple glob characters are supported (*, ?, [abc]).
+#
+# On first install, an empty file is created at ~/.macadminignore.
+
+# Preserve user-installed toolchains
+~/go
+~/.cargo
+~/.rustup
+
+# Preserve downloaded installers and disk images
+~/Downloads/*.dmg
+~/Downloads/*.pkg
+~/Downloads/*.iso
+
+# Preserve development artifacts that look cache-like but are not
+~/Projects/**/node_modules
+~/Projects/**/.git
+
+# Preserve SSH keys and GPG keys
+~/.ssh
+~/.gnupg
+
+# Preserve browser caches (these are large but actively used)
+~/Library/Caches/Google
+~/Library/Caches/Firefox
+~/Library/Caches/com.apple.Safari

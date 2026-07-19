@@ -1,0 +1,87 @@
+# ~/.macadminrc — local configuration for macadmin
+# This file is sourced by lib/config.zsh. Use shell-style KEY=value pairs.
+# Lines beginning with '#' are comments. Blank lines are ignored.
+#
+# On first install, this file is copied to ~/.macadminrc if no file exists.
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+
+# Default backup destination for commands that produce backups.
+# BACKUP_DIR="$HOME/Backups"
+
+# Where macadmin writes human-readable logs (separate from --json).
+# LOG_DIR="$HOME/.macadmin/logs"
+
+# Where macadmin stores temporary working directories (auto-cleaned on EXIT).
+# TEMP_DIR="/tmp/macadmin"
+
+# Override the ignore file path (defaults to ~/.macadminignore).
+# IGNORE_FILE="$HOME/.macadminignore"
+
+# ---------------------------------------------------------------------------
+# Behavior toggles
+# ---------------------------------------------------------------------------
+
+# When set to 1, every mutating command defaults to dry-run.
+# Useful on shared machines or when experimenting.
+# DEFAULT_DRY_RUN=0
+
+# When set to 1, every mutating command behaves as if --protect were passed.
+# Refuses to proceed without --yes even when --yes is supplied.
+# PROTECT_DEFAULT=0
+
+# Verbosity: 0 = quiet, 1 = normal, 2 = debug.
+# VERBOSITY=1
+
+# ---------------------------------------------------------------------------
+# Cleanup
+# ---------------------------------------------------------------------------
+
+# Extra allowlisted roots for `macadmin cleanup --user`.
+# Colon-separated absolute paths. Each must already exist and be under $HOME.
+# CLEANUP_ALLOWLIST_EXTRA="$HOME/work/cache:$HOME/scratch/temp"
+
+# Minimum age (in days) for a cache entry to be eligible for deletion.
+# CLEANUP_MIN_AGE_DAYS=7
+
+# Minimum size (in bytes) for a cache entry to be eligible for deletion.
+# CLEANUP_MIN_SIZE_BYTES=1048576
+
+# ---------------------------------------------------------------------------
+# venv-finder
+# ---------------------------------------------------------------------------
+
+# Default search root when no --path is provided to venv-finder.
+# VENV_FINDER_DEFAULT_PATH="$HOME/Projects"
+
+# Ignore patterns for venv-finder (regex; matched against full path).
+# VENV_FINDER_IGNORE_PATTERNS="\\.git/|node_modules/|\\.venv/__pycache__/"
+
+# Minimum venv size (bytes) to surface; smaller venvs are filtered out.
+# VENV_FINDER_MIN_SIZE_BYTES=1024
+
+# ---------------------------------------------------------------------------
+# Network
+# ---------------------------------------------------------------------------
+
+# Default DNS flush scope: 'cache' (default), 'mdns', 'all'.
+# DNS_FLUSH_SCOPE="cache"
+
+# Default ping count when none specified.
+# PING_COUNT=4
+
+# ---------------------------------------------------------------------------
+# Brew
+# ---------------------------------------------------------------------------
+
+# Path to your Brewfile; used by `brew-tools bundle {generate,diff,apply}`.
+# BREWFILE_PATH="$HOME/Brewfile"
+
+# ---------------------------------------------------------------------------
+# Local overrides
+# ---------------------------------------------------------------------------
+
+# Anything below this line is loaded but never overwritten by `install.sh`.
+# Add machine-specific settings here.
