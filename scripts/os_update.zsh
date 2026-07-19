@@ -141,6 +141,10 @@ fi
 
 if [[ -n "$opt_install" ]]; then
   # Safety-by-default
+  if ((MACADMIN_PROTECT)) && ((!MACADMIN_YES)); then
+    log_error "Refusing to install updates under --protect without --yes."
+    exit ${EX_NOPERM:-77}
+  fi
   if ((!MACADMIN_DRY_RUN)) && ((!MACADMIN_YES)); then
     log_error "Refusing to install updates without --yes. Re-run with --dry-run to preview."
     exit ${EX_NOPERM:-77}

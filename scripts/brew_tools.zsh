@@ -108,6 +108,10 @@ case "$cmd" in
     fi
 
     # Not installed: require --yes; respect dry-run
+    if ((MACADMIN_PROTECT)) && ((!MACADMIN_YES)); then
+      log_error "Refusing to install Homebrew under --protect without --yes."
+      exit ${EX_NOPERM:-77}
+    fi
     if ((!MACADMIN_YES)); then
       log_error "Refusing to install Homebrew without --yes."
       exit ${EX_NOPERM:-77}

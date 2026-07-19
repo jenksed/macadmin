@@ -232,6 +232,10 @@ case "$subcmd" in
     dev=$(_ns_device_for_service "$svc")
 
     # Safety-by-default
+    if ((MACADMIN_PROTECT)) && ((!MACADMIN_YES)); then
+      log_error "Refusing to change Wi‑Fi state under --protect without --yes."
+      exit ${EX_NOPERM:-77}
+    fi
     if ((!MACADMIN_DRY_RUN)) && ((!MACADMIN_YES)); then
       log_error "Refusing to change Wi‑Fi state without --yes. Use --dry-run to preview."
       exit ${EX_NOPERM:-77}
