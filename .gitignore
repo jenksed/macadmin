@@ -1,0 +1,69 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+.apdisk
+
+# Editors / IDEs
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+*.rej
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# Logs and runtime artifacts
+*.log
+*.out
+*.spin
+*.dump
+*.crash
+core
+core.*
+
+# macadmin runtime
+tests/.wifi_test.out
+tests/tmp_*/
+tests/fixtures/large_*
+!tests/fixtures/.gitkeep
+!tests/mocks/
+!tests/tmp_net_ovr.*/bin/
+!tests/tmp_net_ovr.*/home/
+
+# Local user config (must not be committed)
+.macadminrc
+.macadminignore
+.macadmin/
+*.local
+
+# Coverage / build artifacts
+coverage/
+*.lcov
+dist/
+build/
+*.tar.gz
+*.tgz
+*.zip
+
+# OS-specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
