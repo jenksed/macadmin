@@ -23,7 +23,7 @@ source "$LIB_DIR/log.zsh" 2>/dev/null || true
 # Parse global flags. After this, "$@" contains only command-specific args.
 # Guard against empty array to avoid `set -- ""` (which leaves $1 as empty).
 macadmin_parse_globals "$@" 2>/dev/null || true
-if ((${#MACADMIN_ARGS[@]} > 0)); then
+if (( ${#MACADMIN_ARGS[@]} > 0 )); then
   set -- "${MACADMIN_ARGS[@]}"
 else
   set --
@@ -36,8 +36,7 @@ require_macos || exit ${EX_OSERR:-71}
 # Help
 # ---------------------------------------------------------------------------
 
-usage()
-{
+usage() {
   cat <<'EOF'
 _template.zsh - replace this summary with a one-line description
 
@@ -77,26 +76,16 @@ typeset -a _pass1
 _pass1=()
 typeset -i _expect_value=0
 for arg in "$@"; do
-  if ((_expect_value)); then
+  if (( _expect_value )); then
     _pass1+=("$arg")
     _expect_value=0
     continue
   fi
   case "$arg" in
-    -h | --help)
-      usage
-      exit ${EX_OK:-0}
-      ;;
-    --name)
-      _pass1+=("$arg")
-      _expect_value=1
-      ;;
-    --dry-run | --yes | --json | --pretty | --quiet | --protect | --verbose) _pass1+=("$arg") ;;
-    --)
-      shift
-      _pass1+=("$@")
-      break
-      ;;
+    -h|--help) usage; exit ${EX_OK:-0} ;;
+    --name)    _pass1+=("$arg"); _expect_value=1 ;;
+    --dry-run|--yes|--json|--pretty|--quiet|--protect|--verbose) _pass1+=("$arg") ;;
+    --)        shift; _pass1+=("$@" ); break ;;
     *)
       log_error "unknown arg: $arg" 2>/dev/null || print -r -- "[ERROR] unknown arg: $arg" >&2
       usage >&2
@@ -106,17 +95,17 @@ for arg in "$@"; do
 done
 
 typeset -i _i=1
-while ((_i <= ${#_pass1[@]})); do
+while (( _i <= ${#_pass1[@]} )); do
   case "${_pass1[_i]}" in
     --name)
-      ((_i + 1 <= ${#_pass1[@]})) || {
+      (( _i + 1 <= ${#_pass1[@]} )) || {
         print -r -- "[ERROR] --name requires a value" >&2
         exit ${EX_USAGE:-64}
       }
-      opt_name="${_pass1[_i + 1]}"
-      ((_i += 2))
+      opt_name="${_pass1[_i+1]}"
+      (( _i += 2 ))
       ;;
-    *) ((_i++)) ;;
+    *) (( _i++ )) ;;
   esac
 done
 
@@ -124,7 +113,7 @@ done
 # Action
 # ---------------------------------------------------------------------------
 
-if ((MACADMIN_JSON)); then
+if (( MACADMIN_JSON )); then
   macadmin_json_obj greeting="hello" name="$opt_name"
   printf '\n'
 else
