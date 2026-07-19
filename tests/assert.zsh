@@ -20,8 +20,14 @@ run_cmd()
   shift
   [[ "$1" == "--" ]] && shift
   local __out __status
+  # zsh's `errexit` propagates into `var=$(failing_cmd)`, exiting the
+  # caller before we can capture the exit code. Disable errexit +
+  # pipefail locally so failing commands are observable. Existing
+  # tests using exit-0 commands are unaffected.
+  setopt local_options no_errexit no_pipefail
   __out=$("$@" 2>&1)
   __status=$?
+  setopt local_options errexit pipefail
   eval ${__prefix}_OUT="${__out:q}"
   eval ${__prefix}_STATUS=${__status}
 }
