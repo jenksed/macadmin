@@ -90,19 +90,22 @@ test:
 
 coverage:
 	@command -v zsh >/dev/null 2>&1 || { echo "zsh not found"; exit 69; }
-	@total=$$(ls scripts/*.zsh 2>/dev/null | grep -v '^scripts/_' | wc -l | tr -d ' '); \
-	tested=0; untested=""; \
-	for c in $$(ls scripts/*.zsh 2>/dev/null | grep -v '^scripts/_' | xargs -n1 basename | sed 's/\.zsh$$//' | sed 's/_/-/g'); do \
-	  if ls tests/test_$$(echo "$c" | sed 's/-/_/g').zsh tests/test_$$c.bats 2>/dev/null | grep -q .; then \
-	    tested=$$((tested + 1)); \
-	  else \
-	    untested="$$untested $c"; \
-	  fi; \
-	done; \
-	echo "Coverage: $$tested / $$total commands have tests"; \
-	if [[ -n "$$untested" ]]; then \
-	  echo "Untested:$$untested"; \
-	fi
+	@zsh -c 'setopt NULL_GLOB; \
+	  total=$$(ls scripts/*.zsh 2>/dev/null | grep -v "^scripts/_" | wc -l | tr -d " "); \
+	  tested=0; untested=""; \
+	  for c in $$(ls scripts/*.zsh 2>/dev/null | grep -v "^scripts/_" | xargs -n1 basename | sed "s/\\.zsh$$//" | sed "s/_/-/g"); do \
+	    f_zsh="tests/test_$$(echo "$$c" | sed "s/-/_/g").zsh"; \
+	    f_bats="tests/test_$$c.bats"; \
+	    if [[ -e "$$f_zsh" ]] || [[ -e "$$f_bats" ]]; then \
+	      tested=$$((tested + 1)); \
+	    else \
+	      untested="$$untested $$c"; \
+	    fi; \
+	  done; \
+	  echo "Coverage: $$tested / $$total commands have tests"; \
+	  if [[ -n "$$untested" ]]; then \
+	    echo "Untested:$$untested"; \
+	  fi'
 
 protect-check:
 	@command -v zsh >/dev/null 2>&1 || { echo "zsh not found"; exit 69; }
