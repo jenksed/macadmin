@@ -20,7 +20,8 @@ typeset -g MACADMIN_QUIET=${MACADMIN_QUIET:-0}
 # Resulting non-global args after parsing
 typeset -ga MACADMIN_ARGS
 
-macadmin_globals_help() {
+macadmin_globals_help()
+{
   cat <<'EOF'
 Global flags:
   --dry-run    Print actions without executing (also sets DRY_RUN)
@@ -33,35 +34,43 @@ Global flags:
 EOF
 }
 
-macadmin_parse_globals() {
+macadmin_parse_globals()
+{
   # Usage: macadmin_parse_globals "$@"
   # Side effects: sets and exports MACADMIN_* vars; fills MACADMIN_ARGS with remaining args.
   MACADMIN_ARGS=()
-  local -a in; in=($@)
+  local -a in
+  in=($@)
   local i=1
-  while (( i <= ${#in} )); do
+  while ((i <= ${#in})); do
     case "${in[i]}" in
-      --dry-run)  MACADMIN_DRY_RUN=1 ;;
-      --yes)      MACADMIN_YES=1 ;;
-      --verbose)  MACADMIN_VERBOSE=1 ;;
-      --json)     MACADMIN_JSON=1 ;;
-      --quiet)    MACADMIN_QUIET=1 ;;
-      --protect)  MACADMIN_PROTECT=1 ;;
-      --)         (( i++ )); while (( i <= ${#in} )); do MACADMIN_ARGS+="${in[i]}"; (( i++ )); done; break ;;
-      -*)         MACADMIN_ARGS+="${in[i]}" ;;
-      *)          MACADMIN_ARGS+="${in[i]}" ;;
+      --dry-run) MACADMIN_DRY_RUN=1 ;;
+      --yes) MACADMIN_YES=1 ;;
+      --verbose) MACADMIN_VERBOSE=1 ;;
+      --json) MACADMIN_JSON=1 ;;
+      --quiet) MACADMIN_QUIET=1 ;;
+      --protect) MACADMIN_PROTECT=1 ;;
+      --)
+        ((i++))
+        while ((i <= ${#in})); do
+          MACADMIN_ARGS+="${in[i]}"
+          ((i++))
+        done
+        break
+        ;;
+      -*) MACADMIN_ARGS+="${in[i]}" ;;
+      *) MACADMIN_ARGS+="${in[i]}" ;;
     esac
-    (( i++ ))
+    ((i++))
   done
 
   # Enforce mutual exclusion: quiet vs verbose -> quiet wins
-  if (( MACADMIN_QUIET )); then MACADMIN_VERBOSE=0; fi
+  if ((MACADMIN_QUIET)); then MACADMIN_VERBOSE=0; fi
 
   # Export for subcommands and helpers
   export MACADMIN_DRY_RUN MACADMIN_YES MACADMIN_VERBOSE MACADMIN_JSON MACADMIN_QUIET MACADMIN_PROTECT
   # Back-compat for helpers expecting DRY_RUN
-  if (( MACADMIN_DRY_RUN )); then export DRY_RUN=1; fi
+  if ((MACADMIN_DRY_RUN)); then export DRY_RUN=1; fi
 
   return 0
 }
-

@@ -9,7 +9,8 @@ macadmin_parse_globals "$@" 2>/dev/null || true
 set -- "${MACADMIN_ARGS[@]}"
 require_macos || exit 1
 
-usage() {
+usage()
+{
   cat <<'EOF'
 backup_tmutil.zsh - Time Machine helpers
 
@@ -41,7 +42,7 @@ case "$cmd" in
     auto=0
     [[ ${1:-} == "--auto" ]] && auto=1
     log_info "Starting Time Machine backup..."
-    if (( auto )); then
+    if ((auto)); then
       run tmutil startbackup --auto
     else
       run tmutil startbackup
@@ -52,7 +53,10 @@ case "$cmd" in
     ;;
   thin)
     percent=${2:-}
-    [[ -z "$percent" ]] && { usage; exit 1; }
+    [[ -z "$percent" ]] && {
+      usage
+      exit 1
+    }
     require_sudo
     log_info "Thinning local snapshots to ${percent}%..."
     run sudo tmutil thinlocalsnapshots / $percent 4
@@ -60,14 +64,29 @@ case "$cmd" in
   exclude)
     action=${2:-}
     path=${3:-}
-    [[ -z "$action" || -z "$path" ]] && { usage; exit 1; }
+    [[ -z "$action" || -z "$path" ]] && {
+      usage
+      exit 1
+    }
     case "$action" in
-      add) log_info "Excluding $path"; run tmutil addexclusion "$path" ;;
-      remove) log_info "Removing exclusion $path"; run tmutil removeexclusion "$path" ;;
-      *) usage; exit 1 ;;
+      add)
+        log_info "Excluding $path"
+        run tmutil addexclusion "$path"
+        ;;
+      remove)
+        log_info "Removing exclusion $path"
+        run tmutil removeexclusion "$path"
+        ;;
+      *)
+        usage
+        exit 1
+        ;;
     esac
     ;;
-  -h|--help|*) usage; exit 0 ;;
+  -h | --help | *)
+    usage
+    exit 0
+    ;;
 esac
 
 log_info "Done."

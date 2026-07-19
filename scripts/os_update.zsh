@@ -10,7 +10,8 @@ macadmin_parse_globals "$@" 2>/dev/null || true
 set -- "${MACADMIN_ARGS[@]:-}"
 require_macos || exit 1
 
-usage() {
+usage()
+{
   cat <<'EOF'
 os_update.zsh - list and install macOS updates (softwareupdate wrapper)
 
@@ -42,42 +43,53 @@ typeset opt_install=""
 
 # Parse command-specific flags (globals already stripped)
 typeset -i i=1
-while (( i <= ARGC )); do
+while ((i <= ARGC)); do
   case "${argv[i]}" in
     --list) opt_list=1 ;;
     --restart) opt_restart=1 ;;
     --install)
-      (( i++ )) || true
-      if (( i <= ARGC )); then
+      ((i++)) || true
+      if ((i <= ARGC)); then
         opt_install="${argv[i]}"
       else
         log_error "--install requires a value (label or 'all')"
-        usage; exit ${EX_USAGE:-64}
+        usage
+        exit ${EX_USAGE:-64}
       fi
       ;;
     --install=*) opt_install="${argv[i]#--install=}" ;;
-    -h|--help) usage; exit 0 ;;
-    --dry-run|--yes|--verbose|--json|--quiet|--protect) : ;;
-    *) log_warn "Unknown arg: ${argv[i]}"; usage; exit ${EX_USAGE:-64} ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --dry-run | --yes | --verbose | --json | --quiet | --protect) : ;;
+    *)
+      log_warn "Unknown arg: ${argv[i]}"
+      usage
+      exit ${EX_USAGE:-64}
+      ;;
   esac
-  (( i++ ))
+  ((i++))
 done
 
 require_cmd softwareupdate || exit ${EX_UNAVAILABLE:-69}
 
 # Helpers to inspect available updates
-_su_list_output() {
+_su_list_output()
+{
   # Capture list output without exiting on upstream non-zero
   softwareupdate --list 2>&1 || true
 }
 
-_parse_labels() {
+_parse_labels()
+{
   # stdin: softwareupdate --list output
   # out: one label per line
   awk '/^\* Label:/ { sub(/^\* Label:[[:space:]]*/, ""); print }'
 }
 
-_label_block_contains_restart() {
+_label_block_contains_restart()
+{
   # $1: label; stdin: softwareupdate --list output
   # exit 0 if block for label contains a restart hint
   awk -v target="$1" '
@@ -93,7 +105,8 @@ _label_block_contains_restart() {
     END { exit(found?0:1) }'
 }
 
-_any_selected_require_restart() {
+_any_selected_require_restart()
+{
   # $1: selection type: 'all' or label; $2: list output blob
   local sel="$1" blob="$2"
   if [[ "$sel" == all ]]; then
@@ -103,21 +116,22 @@ _any_selected_require_restart() {
   print -r -- "$blob" | _label_block_contains_restart "$sel"
 }
 
-_label_exists() {
+_label_exists()
+{
   # $1: label; $2: list output blob
   print -r -- "$2" | _parse_labels | grep -Fx -- "$1" >/dev/null 2>&1
 }
 
-if (( opt_list )); then
+if ((opt_list)); then
   log_info "Listing available updates..."
   # Pass-through for human-friendly details
   run softwareupdate --list
 
   # Additionally, parse labels for quick reference
-  if (( ! MACADMIN_JSON )); then
+  if ((!MACADMIN_JSON)); then
     labels=()
-    labels=($( _su_list_output | _parse_labels )) || labels=()
-    if (( ${#labels[@]} > 0 )); then
+    labels=($(_su_list_output | _parse_labels)) || labels=()
+    if ((${#labels[@]} > 0)); then
       print -r -- "Labels: ${labels[*]}"
     else
       log_info "No updates found."
@@ -127,17 +141,17 @@ fi
 
 if [[ -n "$opt_install" ]]; then
   # Safety-by-default
-  if (( ! MACADMIN_DRY_RUN )) && (( ! MACADMIN_YES )); then
+  if ((!MACADMIN_DRY_RUN)) && ((!MACADMIN_YES)); then
     log_error "Refusing to install updates without --yes. Re-run with --dry-run to preview."
     exit ${EX_NOPERM:-77}
   fi
 
   # Determine availability and restart requirements
   list_blob=$(_su_list_output)
-  labels_avail=($( print -r -- "$list_blob" | _parse_labels )) || labels_avail=()
+  labels_avail=($(print -r -- "$list_blob" | _parse_labels)) || labels_avail=()
 
   if [[ "$opt_install" == all ]]; then
-    if (( ${#labels_avail[@]} == 0 )); then
+    if ((${#labels_avail[@]} == 0)); then
       log_info "No updates available."
       exit 0
     fi
@@ -149,7 +163,7 @@ if [[ -n "$opt_install" ]]; then
   fi
 
   if _any_selected_require_restart "$opt_install" "$list_blob"; then
-    if (( ! opt_restart )); then
+    if ((!opt_restart)); then
       log_error "One or more selected updates require a restart. Re-run with --restart to proceed."
       exit ${EX_TEMPFAIL:-75}
     fi
@@ -163,9 +177,9 @@ if [[ -n "$opt_install" ]]; then
   else
     cmd+=("$opt_install")
   fi
-  (( opt_restart )) && cmd+=(--restart)
+  ((opt_restart)) && cmd+=(--restart)
 
-  if (( MACADMIN_DRY_RUN )); then
+  if ((MACADMIN_DRY_RUN)); then
     log_info "Dry-run: planned install command: ${(q)cmd}"
     exit 0
   fi
@@ -176,6 +190,7 @@ if [[ -n "$opt_install" ]]; then
   exit 0
 fi
 
-if (( ! opt_list )) ; then
-  usage; exit ${EX_USAGE:-64}
+if ((!opt_list)); then
+  usage
+  exit ${EX_USAGE:-64}
 fi

@@ -10,7 +10,8 @@ macadmin_parse_globals "$@" 2>/dev/null || true
 set -- "${MACADMIN_ARGS[@]:-}"
 require_macos || exit 1
 
-usage() {
+usage()
+{
   cat <<'EOF'
 system_info.zsh - print stable system key/value pairs or JSON
 
@@ -31,13 +32,17 @@ EOF
 typeset -i PRETTY=0
 for arg in "$@"; do
   case "$arg" in
-    -h|--help) usage; exit 0 ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
     --pretty) PRETTY=1 ;;
   esac
 done
 
 # Minimal JSON escaper (strings)
-_json_escape() {
+_json_escape()
+{
   local s="$1"
   s=${s//\\/\\\\}
   s=${s//\"/\\\"}
@@ -48,12 +53,14 @@ _json_escape() {
 }
 
 # Read fields with safe fallbacks
-_sw_val() {
+_sw_val()
+{
   local key="$1"
   sw_vers 2>/dev/null | awk -v k="$key" 'BEGIN{FS=":[ \t]*"} $1==k {print $2; exit}'
 }
 
-_get_mem_gb() {
+_get_mem_gb()
+{
   local bytes
   bytes=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
   if [[ "$bytes" != 0 ]]; then
@@ -63,18 +70,21 @@ _get_mem_gb() {
   fi
 }
 
-_get_hw() {
+_get_hw()
+{
   # Extract model identifier and chip if available
   local sp
   sp=$(system_profiler SPHardwareDataType 2>/dev/null || true)
   print -r -- "$sp" | awk -F': ' '/Model Identifier/{m=$2} /Chip:/{c=$2} /Processor Name:/{c=$2} END{print m "\n" c}'
 }
 
-_primary_volume() {
+_primary_volume()
+{
   echo "/"
 }
 
-_disk_gb() {
+_disk_gb()
+{
   # _disk_gb free|total for primary volume '/'
   local field="$1" line
   line=$(df -k / 2>/dev/null | awk 'NR==2')
@@ -82,17 +92,18 @@ _disk_gb() {
   blocks=$(print -r -- "$line" | awk '{print $2}')
   used=$(print -r -- "$line" | awk '{print $3}')
   avail=$(print -r -- "$line" | awk '{print $4}')
-  local total=$(( blocks ))
-  local free=$(( avail ))
+  local total=$((blocks))
+  local free=$((avail))
   local val_k=0
   case "$field" in
     total) val_k=$total ;;
-    free)  val_k=$free ;;
+    free) val_k=$free ;;
   esac
   awk -v k="$val_k" 'BEGIN{printf "%.1f", k/1024/1024}'
 }
 
-_interfaces_json_fragment() {
+_interfaces_json_fragment()
+{
   # Deterministic object of interfaces with IPs: {"en0":"192.168.0.2",...}
   local devs
   devs=($(networksetup -listallhardwareports 2>/dev/null | awk '/Device:/{print $2}' | sort))
@@ -102,41 +113,54 @@ _interfaces_json_fragment() {
     ip=$(ipconfig getifaddr "$d" 2>/dev/null || true)
     [[ -z "$ip" ]] && continue
     local key val
-    key=$(_json_escape "$d"); val=$(_json_escape "$ip")
-    if (( first )); then first=0; else out+=","; fi
+    key=$(_json_escape "$d")
+    val=$(_json_escape "$ip")
+    if ((first)); then first=0; else out+=","; fi
     out+="\"$key\":\"$val\""
   done
   out+="}"
   print -r -- "$out"
 }
 
-_uptime_seconds() {
+_uptime_seconds()
+{
   local sec now
   sec=$(sysctl -n kern.boottime 2>/dev/null | awk -F'[ =,]' '{for(i=1;i<=NF;i++)if($i=="sec"){print $(i+2);exit}}' || echo 0)
   now=$(date +%s)
   if [[ -n "$sec" && "$sec" != 0 ]]; then
-    echo $(( now - sec ))
+    echo $((now - sec))
   else
     echo 0
   fi
 }
 
 # Gather values
-typeset -g PRODUCT_VERSION; PRODUCT_VERSION=$(_sw_val ProductVersion)
-typeset -g BUILD; BUILD=$(_sw_val BuildVersion)
-typeset -g MODEL_ID; typeset -g CHIP
-{ read -r MODEL_ID CHIP } <<EOF
+typeset -g PRODUCT_VERSION
+PRODUCT_VERSION=$(_sw_val ProductVersion)
+typeset -g BUILD
+BUILD=$(_sw_val BuildVersion)
+typeset -g MODEL_ID
+typeset -g CHIP
+{
+  read -r MODEL_ID CHIP
+} <<EOF
 $(_get_hw)
 EOF
-typeset -g MEM_GB; MEM_GB=$(_get_mem_gb)
-typeset -g PRIMARY_VOL; PRIMARY_VOL=$(_primary_volume)
-typeset -g DISK_TOTAL_GB; DISK_TOTAL_GB=$(_disk_gb total)
-typeset -g DISK_FREE_GB; DISK_FREE_GB=$(_disk_gb free)
-typeset -g IFACES_JSON; IFACES_JSON=$(_interfaces_json_fragment)
-typeset -g UPTIME_SEC; UPTIME_SEC=$(_uptime_seconds)
+typeset -g MEM_GB
+MEM_GB=$(_get_mem_gb)
+typeset -g PRIMARY_VOL
+PRIMARY_VOL=$(_primary_volume)
+typeset -g DISK_TOTAL_GB
+DISK_TOTAL_GB=$(_disk_gb total)
+typeset -g DISK_FREE_GB
+DISK_FREE_GB=$(_disk_gb free)
+typeset -g IFACES_JSON
+IFACES_JSON=$(_interfaces_json_fragment)
+typeset -g UPTIME_SEC
+UPTIME_SEC=$(_uptime_seconds)
 
-if (( MACADMIN_JSON || PRETTY )); then
-  if (( PRETTY )); then
+if ((MACADMIN_JSON || PRETTY)); then
+  if ((PRETTY)); then
     printf '{\n'
     printf '  "product_version": "%s",\n' "$(_json_escape "$PRODUCT_VERSION")"
     printf '  "build": "%s",\n' "$(_json_escape "$BUILD")"

@@ -9,7 +9,8 @@ macadmin_parse_globals "$@" 2>/dev/null || true
 set -- "${MACADMIN_ARGS[@]}"
 require_macos || exit 1
 
-usage() {
+usage()
+{
   cat <<'EOF'
 settings_ui.zsh - apply sensible Finder/Dock/Text settings
 
@@ -27,12 +28,19 @@ for arg in "$@"; do
   case "$arg" in
     --apply) apply=1 ;;
     --restart) restart=1 ;;
-    -h|--help) usage; exit 0 ;;
-    *) log_warn "Unknown arg: $arg"; usage; exit 1 ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      log_warn "Unknown arg: $arg"
+      usage
+      exit 1
+      ;;
   esac
 done
 
-if (( apply )); then
+if ((apply)); then
   log_info "Applying Finder settings..."
   defaults write NSGlobalDomain AppleShowAllExtensions -bool true
   defaults write com.apple.finder ShowPathbar -bool true
@@ -53,7 +61,7 @@ if (( apply )); then
   defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 fi
 
-if (( restart )); then
+if ((restart)); then
   log_info "Restarting Finder and Dock..."
   killall Finder 2>/dev/null || true
   killall Dock 2>/dev/null || true

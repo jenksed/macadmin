@@ -27,4 +27,3 @@ typeset -gxr EX_TEMPFAIL=75
 typeset -gxr EX_PROTOCOL=76
 typeset -gxr EX_NOPERM=77
 typeset -gxr EX_CONFIG=78
-

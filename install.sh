@@ -27,20 +27,32 @@ if [[ -t 1 ]]; then
   readonly C_GREEN=$'\e[32m'
   readonly C_YELLOW=$'\e[33m'
   readonly C_BLUE=$'\e[34m'
-  readonly C_DIM=$'\e[2m'
   readonly C_RESET=$'\e[0m'
 else
-  readonly C_RED='' C_GREEN='' C_YELLOW='' C_BLUE='' C_DIM='' C_RESET=''
+  readonly C_RED='' C_GREEN='' C_YELLOW='' C_BLUE='' C_RESET=''
 fi
 
-info()  { print -r -- "${C_BLUE}[INFO]${C_RESET} $*"; }
-ok()    { print -r -- "${C_GREEN}[OK]${C_RESET} $*"; }
-warn()  { print -r -- "${C_YELLOW}[WARN]${C_RESET} $*" >&2; }
-err()   { print -r -- "${C_RED}[ERROR]${C_RESET} $*" >&2; }
+info()
+{
+  print -r -- "${C_BLUE}[INFO]${C_RESET} $*"
+}
+ok()
+{
+  print -r -- "${C_GREEN}[OK]${C_RESET} $*"
+}
+warn()
+{
+  print -r -- "${C_YELLOW}[WARN]${C_RESET} $*" >&2
+}
+err()
+{
+  print -r -- "${C_RED}[ERROR]${C_RESET} $*" >&2
+}
 
 # ----- Help ----------------------------------------------------------------
 
-usage() {
+usage()
+{
   cat <<'EOF'
 macadmin installer
 
@@ -69,17 +81,32 @@ UNINSTALL=0
 DO_LINK=1
 DO_RC=1
 
-while (( $# > 0 )); do
+while (($# > 0)); do
   case "$1" in
     --dir)
-      [[ -n "${2:-}" ]] || { err "--dir requires a path"; exit 64; }
+      [[ -n "${2:-}" ]] || {
+        err "--dir requires a path"
+        exit 64
+      }
       INSTALL_DIR="$2"
       shift 2
       ;;
-    --uninstall) UNINSTALL=1; shift ;;
-    --no-link)   DO_LINK=0; shift ;;
-    --no-rc)     DO_RC=0; shift ;;
-    -h|--help)   usage; exit 0 ;;
+    --uninstall)
+      UNINSTALL=1
+      shift
+      ;;
+    --no-link)
+      DO_LINK=0
+      shift
+      ;;
+    --no-rc)
+      DO_RC=0
+      shift
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
     *)
       err "unknown option: $1"
       usage >&2
@@ -116,7 +143,7 @@ fi
 
 # ----- Uninstall -----------------------------------------------------------
 
-if (( UNINSTALL )); then
+if ((UNINSTALL)); then
   info "Uninstalling macadmin..."
   if [[ -L "$BIN_LINK" ]]; then
     rm -f -- "$BIN_LINK"
@@ -138,7 +165,7 @@ fi
 
 # Reject empty, root, system, or non-$HOME paths.
 case "$INSTALL_DIR" in
-  ""|"/"|"/System"*|"/usr"*|"/bin"*|"/sbin"*|"/lib"*|"/etc"*|"/var"*|"/private"*|"/tmp")
+  "" | "/" | "/System"* | "/usr"* | "/bin"* | "/sbin"* | "/lib"* | "/etc"* | "/var"* | "/private"* | "/tmp")
     err "refusing to install into system path: $INSTALL_DIR"
     exit 78
     ;;
@@ -176,13 +203,13 @@ if [[ ! -f "${HOME}/.macadminrc" ]] && [[ -f "$INSTALL_DIR/share/macadminrc.exam
 fi
 
 if [[ ! -f "${HOME}/.macadminignore" ]]; then
-  : > "${HOME}/.macadminignore"
+  : >"${HOME}/.macadminignore"
   ok "Created empty ~/.macadminignore"
 fi
 
 # ----- Symlink to ~/bin ----------------------------------------------------
 
-if (( DO_LINK )); then
+if ((DO_LINK)); then
   if [[ ! -d "${HOME}/bin" ]]; then
     info "Creating ${HOME}/bin"
     mkdir -p -- "${HOME}/bin"
@@ -199,9 +226,9 @@ fi
 
 # ----- Append PATH to ~/.zshrc ---------------------------------------------
 
-if (( DO_RC )); then
+if ((DO_RC)); then
   if [[ ! -f "$RC_FILE" ]]; then
-    : > "$RC_FILE"
+    : >"$RC_FILE"
   fi
   if ! grep -qF "$PATH_MARKER" "$RC_FILE" 2>/dev/null; then
     {
@@ -209,7 +236,7 @@ if (( DO_RC )); then
       print -r -- "$PATH_MARKER"
       # shellcheck disable=SC2016
       print -r -- 'export PATH="$HOME/bin:$PATH"'
-    } >> "$RC_FILE"
+    } >>"$RC_FILE"
     ok "Added PATH to $RC_FILE"
   else
     info "PATH already configured in $RC_FILE"
@@ -231,7 +258,7 @@ HELP_OUT=$(zsh "$INSTALL_DIR/bin/macadmin" help 2>&1) || {
   exit 70
 }
 HELP_LINES=$(print -r -- "$HELP_OUT" | wc -l | tr -d ' ')
-if (( HELP_LINES < 5 )); then
+if ((HELP_LINES < 5)); then
   err "macadmin help produced suspiciously short output ($HELP_LINES lines)"
   exit 70
 fi
@@ -259,13 +286,13 @@ print -r -- ""
 print -r -- "  Location:    $INSTALL_DIR"
 print -r -- "  Config:      ${HOME}/.macadminrc"
 print -r -- "  Ignore file: ${HOME}/.macadminignore"
-if (( DO_LINK )); then
+if ((DO_LINK)); then
   print -r -- "  Symlink:     $BIN_LINK"
 fi
 print -r -- ""
 print -r -- "  Try:         macadmin help"
 print -r -- "  Uninstall:   ${INSTALL_DIR}/install.sh --uninstall"
-if (( DO_RC )); then
+if ((DO_RC)); then
   print -r -- "  Restart your shell or run: source ${RC_FILE}"
 fi
 print -r -- ""

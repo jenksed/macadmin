@@ -9,7 +9,8 @@ macadmin_parse_globals "$@" 2>/dev/null || true
 set -- "${MACADMIN_ARGS[@]}"
 require_macos || exit 1
 
-usage() {
+usage()
+{
   cat <<'EOF'
 hardening.zsh - basic macOS security hardening
 
@@ -24,7 +25,8 @@ Notes:
 EOF
 }
 
-status() {
+status()
+{
   log_info "Firewall"
   /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate || true
   log_info "Gatekeeper"
@@ -44,21 +46,42 @@ case "$cmd" in
     action=${2:-}
     require_sudo
     case "$action" in
-      on)  log_info "Enabling firewall..."; run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on ;;
-      off) log_info "Disabling firewall..."; run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off ;;
-      *) usage; exit 1 ;;
+      on)
+        log_info "Enabling firewall..."
+        run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+        ;;
+      off)
+        log_info "Disabling firewall..."
+        run sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+        ;;
+      *)
+        usage
+        exit 1
+        ;;
     esac
     ;;
   gatekeeper)
     action=${2:-}
     require_sudo
     case "$action" in
-      on)  log_info "Enabling Gatekeeper..."; run sudo spctl --master-enable ;;
-      off) log_info "Disabling Gatekeeper..."; run sudo spctl --master-disable ;;
-      *) usage; exit 1 ;;
+      on)
+        log_info "Enabling Gatekeeper..."
+        run sudo spctl --master-enable
+        ;;
+      off)
+        log_info "Disabling Gatekeeper..."
+        run sudo spctl --master-disable
+        ;;
+      *)
+        usage
+        exit 1
+        ;;
     esac
     ;;
-  -h|--help|*) usage; exit 0 ;;
+  -h | --help | *)
+    usage
+    exit 0
+    ;;
 esac
 
 log_info "Done."

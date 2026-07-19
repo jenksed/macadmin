@@ -22,13 +22,15 @@ typeset -g MACADMIN_PROTECT=${MACADMIN_PROTECT:-0}
 typeset -g MACADMIN_QUIET=${MACADMIN_QUIET:-0}
 
 # Map dashed command names to underscored script filenames
-_cmd_to_file() {
+_cmd_to_file()
+{
   # in: command-name -> scripts/command_name.zsh
   local name="$1"
   print -r -- "$SCRIPTS_DIR/${name//-/_}.zsh"
 }
 
-_file_to_cmd() {
+_file_to_cmd()
+{
   # in: scripts/command_name.zsh -> command-name
   local file="$1" base
   base=${file:t}
@@ -36,7 +38,8 @@ _file_to_cmd() {
   print -r -- "${base//_/-}"
 }
 
-_discover_commands() {
+_discover_commands()
+{
   # List commands by scanning scripts/*.zsh, excluding files that start with '_'
   local f
   for f in "$SCRIPTS_DIR"/*.zsh; do
@@ -46,7 +49,8 @@ _discover_commands() {
   done | sort
 }
 
-_extract_summary() {
+_extract_summary()
+{
   # Try to extract a one-line summary from a script's usage block.
   # Looks for a line like: "<filename> - <summary>"
   local file="$1"
@@ -69,7 +73,8 @@ _extract_summary() {
   fi
 }
 
-_print_help() {
+_print_help()
+{
   cat <<'HDR'
 macadmin - macOS admin utilities dispatcher
 
@@ -99,35 +104,52 @@ HDR
   printf "  macadmin cleanup --user --dry-run\n"
 }
 
-_suggest_command() {
+_suggest_command()
+{
   local input="$1"
   local list cmd best
   list=($(_discover_commands | while read -r p; do _file_to_cmd "$p"; done))
   # Prefer prefix match, then substring
-  for cmd in $list; do [[ $cmd == ${input}* ]] && { print -r -- "$cmd"; return; } done
-  for cmd in $list; do [[ $cmd == *${input}* ]] && { print -r -- "$cmd"; return; } done
+  for cmd in $list; do [[ $cmd == ${input}* ]] && {
+    print -r -- "$cmd"
+    return
+  }; done
+  for cmd in $list; do [[ $cmd == *${input}* ]] && {
+    print -r -- "$cmd"
+    return
+  }; done
   # Fallback: print first
   print -r -- "${list[1]:-}"
 }
 
 # Parse global flags using library (strips globals; sets MACADMIN_ARGS)
 case "${1:-}" in
-  -h|--help) _print_help; exit 0 ;;
+  -h | --help)
+    _print_help
+    exit 0
+    ;;
 esac
 macadmin_parse_globals "$@"
-typeset -a rest; rest=(${MACADMIN_ARGS[@]})
+typeset -a rest
+rest=(${MACADMIN_ARGS[@]})
 
 # Route to subcommand
 cmd=${rest[1]:-}
-if [[ -z "${cmd:-}" ]]; then _print_help; exit 0; fi
+if [[ -z "${cmd:-}" ]]; then
+  _print_help
+  exit 0
+fi
 
 # Allow `macadmin help` as alias for help
-if [[ "$cmd" == help ]]; then _print_help; exit 0; fi
+if [[ "$cmd" == help ]]; then
+  _print_help
+  exit 0
+fi
 
 # Remaining args for subcommand
-shift_count=$(( ${#rest} >= 1 ? 1 : 0 ))
+shift_count=$((${#rest} >= 1 ? 1 : 0))
 typeset -a subargs
-subargs=(${rest[$((shift_count+1)),-1]})
+subargs=(${rest[$((shift_count + 1)),-1]})
 
 script=$(_cmd_to_file "$cmd")
 if [[ ! -f "$script" ]]; then
