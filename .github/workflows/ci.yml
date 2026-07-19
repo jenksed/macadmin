@@ -1,0 +1,86 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install lint tools
+        run: brew install shellcheck shfmt
+      - name: shellcheck
+        run: make lint
+      - name: shfmt check
+        run: |
+          if ! command -v shfmt >/dev/null 2>&1; then
+            echo "shfmt not installed"; exit 1
+          fi
+          # zsh and bash sources only — markdown excluded
+          shfmt -d -ln bash -i 2 -ci -fn bin lib scripts install.sh tests/run.zsh tests/assert.zsh
+      - name: Bash syntax check
+        run: |
+          for f in bin/macadmin lib/*.zsh scripts/*.zsh install.sh; do
+            [[ -f "$f" ]] || continue
+            zsh -n "$f" || { echo "syntax error in $f"; exit 1; }
+          done
+
+  test:
+    name: test
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test tools
+        run: brew install bats-core
+      - name: Bats library tests
+        run: |
+          if [[ -d tests/lib ]]; then
+            bats tests/lib/
+          else
+            echo "No bats library tests yet"
+          fi
+      - name: Zsh test runner
+        run: make test
+      - name: Coverage report
+        run: make coverage || true
+
+  shell-smoke:
+    name: shell-smoke
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: dispatcher help
+        run: zsh bin/macadmin help
+      - name: every command has --help
+        run: |
+          cmds=$(zsh bin/macadmin help 2>&1 | awk '/^  [a-z]/ {print $1}')
+          missing=0
+          for c in $cmds; do
+            out=$(zsh bin/macadmin "$c" --help 2>&1)
+            code=$?
+            if [[ $code -ne 0 ]] || [[ -z "$out" ]]; then
+              echo "FAIL: $c --help (exit=$code)"
+              missing=$((missing + 1))
+            else
+              echo "OK: $c --help"
+            fi
+          done
+          if [[ $missing -gt 0 ]]; then
+            echo "$missing commands lack --help"
+            exit 1
+          fi
